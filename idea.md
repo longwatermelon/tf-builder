@@ -8,7 +8,9 @@ Generally the puzzles should keep the number of required parameters to edit in a
 
 I have a git submodule ./nn-builder here as an example game that I made for simple fnns you can take a look through for reference on the kind of game style I'm thinking of. We won't visualize heatmaps or anything like nn-builder does; simply display the current outputs the module produces in a forward pass, given the inputs (the user can edit what the inputs are to test their own model).
 
-QOL:
-  * Put little labels on the left of rows / top of columns to denote what the rows and columns mean; we don't want users fumbling around with row/column conventions, we want them to just deal with the actual game.
+Extra details:
+  * Put little labels on the left of rows / top of columns wherever relevant to denote what the rows and columns mean; we don't want users fumbling around with row/column conventions, we want them to focus on the conceptual game.
   * Render all math that you need to render using actual latex.
+  * Users optionally can add a mask to attention logits; they hand-edit the mask matrix too.
+  * Use residual stream.
 
