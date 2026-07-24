@@ -14,4 +14,5 @@ Extra details:
   * Users optionally can add a mask to attention logits; they hand-edit the mask matrix too.
   * Use residual stream.
   * Clicking on a cell in a matrix should auto-highlight the contents inside the cell, so that it's easy to replace text.
+  * Users create their own architectures, we don't decide the modules for them.
 
