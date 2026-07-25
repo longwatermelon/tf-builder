@@ -99,7 +99,7 @@ export default function App() {
   const [models, setModels] = useState(() => ({ [PUZZLES[0].id]: createInitialModel(PUZZLES[0]) }));
   const [scratchByPuzzle, setScratchByPuzzle] = useState(() => ({ [PUZZLES[0].id]: defaultScratch(PUZZLES[0]) }));
   const [selectedModuleId, setSelectedModuleId] = useState(() => models[PUZZLES[0].id].modules[0].id);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(null);
   const [revealedIds, setRevealedIds] = useState(() => new Set());
   const [progress, setProgress] = useState(loadProgress);
   const [panelWidths, setPanelWidths] = useState(DEFAULT_WIDTHS);
@@ -191,8 +191,13 @@ export default function App() {
     if (!models[id]) setModels((prev) => ({ ...prev, [id]: target }));
     if (!scratchByPuzzle[id]) setScratchByPuzzle((prev) => ({ ...prev, [id]: defaultScratch(next) }));
     setActivePuzzleId(id);
-    setActiveTab(0);
+    setActiveTab(null);
     setSelectedModuleId(target.modules[0].id);
+  }
+
+  // select a case for inspection, or clear it when the selected row is clicked again
+  function toggleActiveTab(tab) {
+    setActiveTab((current) => (current === tab ? null : tab));
   }
 
   // insert a new module at the given position; index 0 is reserved for the embedding
@@ -346,18 +351,20 @@ export default function App() {
               evaluation={evaluation}
               scratchTokens={scratchTokens}
               activeTab={activeTab}
-              onSelectTab={setActiveTab}
+              onSelectTab={toggleActiveTab}
             />
           </div>
           <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-            <TestPanel
-              puzzle={puzzle}
-              model={model}
-              evaluation={evaluation}
-              scratchTokens={scratchTokens}
-              onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
-              activeTab={activeTab}
-            />
+            {activeTab !== null ? (
+              <TestPanel
+                puzzle={puzzle}
+                model={model}
+                evaluation={evaluation}
+                scratchTokens={scratchTokens}
+                onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
+                activeTab={activeTab}
+              />
+            ) : null}
           </div>
         </Panel>
 
