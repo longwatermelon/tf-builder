@@ -4,8 +4,10 @@ import { COLORS, MONO } from "../styles/theme";
 
 const VALUE_SHORTCUTS = {
   q: "-1",
-  w: "inf",
-  e: "-inf",
+  w: "100",
+  e: "-100",
+  s: "inf",
+  d: "-inf",
 };
 
 // one hand-editable float; keeps a local draft so partial input like "-" survives typing
