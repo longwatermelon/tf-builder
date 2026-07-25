@@ -1,13 +1,13 @@
 # README
 
-This project is a website for hand-crafting small transformers. The player picks a **puzzle**, assembles a module stack over a residual stream, and edits every weight by hand until the model's per-position next-token predictions match the puzzle's targets.
+This project is a website for hand-crafting small transformers. The player picks a **puzzle**, assembles a module stack over a residual stream, and edits every weight by hand until the model's per-position output tokens match the puzzle's required outputs.
 
 ## Summary
 
 - A **puzzle** is one input/output specification: a vocabulary, a fixed and fully visible set of test sequences, and a per-position target token for each. Puzzles are graded `tutorial` / `easy` / `medium` / `hard`.
-- The **module stack** is the player's architecture. It always begins with an **Embedding** module and can be extended with **Attention Head**, **MLP**, and **Linear** modules. Attention and MLP add into the residual stream; Linear is the only module that changes the stream width, so it doubles as the unembedding.
+- The **module stack** is the player's architecture. Every puzzle starts with a single **Embedding** module, sized so the residual stream is already the token axis; the player inserts and deletes **Attention Head**, **MLP**, and **Linear** modules themselves, at any point in the stack. Attention and MLP add into the residual stream; Linear is the only module that changes the stream width, so it doubles as the unembedding.
 - There is no LayerNorm, and attention scores are raw `QKᵀ` with no `1/√d` scaling — both would only make hand-crafting harder without teaching anything.
-- A puzzle is **solved** when, for every test sequence and every position, the target token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`.
+- A puzzle is **solved** when, for every test sequence and every position, the required token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`. The final softmax is over the vocabulary at each position — it is a per-position output distribution, not a next-token prediction.
 - A solve is **elegant** when the total allocated parameter count is at most the canonical solution's. Optional blocks (`W_E`, `W_P`, the attention mask `M`) can be switched off to drop their parameters from the count.
 - Each puzzle ships a **canonical solution** the player can reveal; the elegance bar is derived from it rather than hand-written. Revealing locks progress for the current attempt only — resetting back to a blank model (or reloading) lets a from-scratch rebuild earn the mark again.
 
@@ -26,9 +26,10 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/components/NumberCell.jsx` - One hand-editable float: draft-preserving input with select-on-focus and arrow-key navigation hooks.
   - `src/components/MatrixEditor.jsx` - Labeled, keyboard-navigable grid of editable weights, with quick fills (zero / identity / causal mask).
   - `src/components/ValueGrid.jsx` - Read-only labeled grid for computed values (residual stream, attention patterns, probabilities).
-  - `src/components/ModuleStack.jsx` - Architecture column: the ordered module cards, stream widths between them, and the add-module controls.
+  - `src/components/ModuleStack.jsx` - Architecture column: the ordered module cards, the stream width each one emits, and the inline insert / delete / reorder controls.
+  - `src/components/ObjectiveCard.jsx` - Always-visible statement of the task: goal, formula, vocabulary, every test case as input → required output with pass state, and the solved / elegant rules.
   - `src/components/ModuleInspector.jsx` - Weight editors and shape controls for the selected module, headed by that module's equation in LaTeX.
-  - `src/components/TestPanel.jsx` - Forward-pass column: test tabs, the editable scratch sequence, token/target/prediction alignment, output distribution, and expandable intermediate values.
+  - `src/components/TestPanel.jsx` - Detail for the selected test case: the editable scratch sequence, input/required/produced alignment, output distribution, and expandable intermediate values.
   - `src/components/PuzzleLibrary.jsx` - Left sidebar puzzle list grouped by difficulty, with solved / elegant marks.
 
 - `nn-builder/` - Git submodule holding the earlier feedforward-network builder, kept only as a design reference.

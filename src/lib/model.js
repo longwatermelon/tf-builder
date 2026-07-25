@@ -45,12 +45,10 @@ export function createLinear({ dOut = 2 } = {}) {
   return { id: makeId("linear"), type: "linear", dOut, W: [], b: [] };
 }
 
-// starting model for a fresh puzzle attempt: embed + unembed only
+// starting model for a fresh puzzle attempt: a single embedding, sized so the stream is already
+// the logit axis — the player adds everything else themselves
 export function createInitialModel(puzzle) {
-  const model = {
-    dModel: puzzle.vocab.length,
-    modules: [createEmbed(), createLinear({ dOut: puzzle.vocab.length })],
-  };
+  const model = { dModel: puzzle.vocab.length, modules: [createEmbed()] };
   return reconcileShapes(model, puzzle);
 }
 

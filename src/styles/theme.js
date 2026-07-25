@@ -36,7 +36,9 @@ export const DIFFICULTY_COLORS = {
 // base action button style
 export const btnStyle = {
   background: COLORS.surface,
-  border: `1px solid ${COLORS.panelBorder}`,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: COLORS.panelBorder,
   borderRadius: 4,
   color: COLORS.text,
   cursor: "pointer",
@@ -49,7 +51,9 @@ export const btnStyle = {
 
 export const subtleBtnStyle = {
   background: "transparent",
-  border: `1px solid ${COLORS.panelBorder}`,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: COLORS.panelBorder,
   borderRadius: 4,
   color: COLORS.textMuted,
   cursor: "pointer",
@@ -63,7 +67,9 @@ export const subtleBtnStyle = {
 // compact icon-style controls used in module headers and steppers
 export const smallBtnStyle = {
   background: COLORS.bg,
-  border: `1px solid ${COLORS.panelBorder}`,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: COLORS.panelBorder,
   borderRadius: 3,
   color: COLORS.textMuted,
   cursor: "pointer",

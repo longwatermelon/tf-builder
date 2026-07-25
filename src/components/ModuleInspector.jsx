@@ -229,7 +229,7 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
         rowLabels={dimLabels(dIn, "d")}
         colLabels={outLabels}
         rowAxis="input dim"
-        colAxis={isLogitLayer ? "logit / token" : "output dim"}
+        colAxis={isLogitLayer ? "token" : "output dim"}
         fills={[FILL_ZERO, FILL_IDENTITY]}
         accent={accent}
       />
@@ -239,7 +239,7 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
         onChange={(next) => onChange({ ...module, b: next[0] })}
         rowLabels={[""]}
         colLabels={outLabels}
-        colAxis={isLogitLayer ? "logit / token" : "output dim"}
+        colAxis={isLogitLayer ? "token" : "output dim"}
         fills={[FILL_ZERO]}
         accent={accent}
       />

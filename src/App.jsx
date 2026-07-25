@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import MathText from "./components/MathText";
 import ModuleInspector from "./components/ModuleInspector";
 import ModuleStack from "./components/ModuleStack";
+import ObjectiveCard from "./components/ObjectiveCard";
 import PuzzleLibrary from "./components/PuzzleLibrary";
 import TestPanel from "./components/TestPanel";
 import { buildSolution, getPuzzle, PUZZLES } from "./features/puzzles/puzzles";
@@ -14,7 +14,7 @@ import {
   evaluatePuzzle,
   reconcileShapes,
 } from "./lib/model";
-import { COLORS, MONO, btnStyle, subtleBtnStyle } from "./styles/theme";
+import { COLORS, DIFFICULTY_COLORS, MONO, btnStyle, subtleBtnStyle } from "./styles/theme";
 
 const PROGRESS_KEY = "tf-builder:progress";
 
@@ -113,10 +113,14 @@ export default function App() {
     setSelectedModuleId(target.modules[0].id);
   }
 
-  function addModule(type) {
+  // insert a new module at the given position; index 0 is reserved for the embedding
+  function addModule(type, index) {
     const factory = type === "attn" ? createAttn : type === "mlp" ? createMlp : createLinear;
     const created = type === "linear" ? factory({ dOut: puzzle.vocab.length }) : factory({});
-    updateModel({ ...model, modules: [...model.modules, created] });
+    const at = Math.min(Math.max(index ?? model.modules.length, 1), model.modules.length);
+    const modules = [...model.modules];
+    modules.splice(at, 0, created);
+    updateModel({ ...model, modules });
     setSelectedModuleId(created.id);
   }
 
@@ -174,8 +178,16 @@ export default function App() {
         <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.textBright, letterSpacing: 0.3 }}>tf-builder</span>
         <span style={{ color: COLORS.panelBorder }}>│</span>
         <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textBright }}>{puzzle.name}</span>
-        <MathText tex={puzzle.formula} style={{ color: COLORS.text, fontSize: 13 }} />
-        <span style={{ fontSize: 11, color: COLORS.textMuted, maxWidth: 460 }}>{puzzle.blurb}</span>
+        <span
+          style={{
+            fontSize: 10,
+            letterSpacing: 0.6,
+            textTransform: "uppercase",
+            color: DIFFICULTY_COLORS[puzzle.difficulty],
+          }}
+        >
+          {puzzle.difficulty}
+        </span>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
           <span style={{ fontFamily: MONO, fontSize: 11, color: COLORS.textMuted }}>
@@ -260,15 +272,31 @@ export default function App() {
         </Panel>
 
         <Panel style={{ flex: "1 1 400px" }}>
-          <TestPanel
-            puzzle={puzzle}
-            model={model}
-            evaluation={evaluation}
-            scratchTokens={scratchTokens}
-            onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
-            activeTab={activeTab}
-            onSelectTab={setActiveTab}
-          />
+          <div
+            style={{
+              padding: "10px 12px 8px",
+              fontSize: 11,
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+              color: COLORS.textMuted,
+            }}
+          >
+            Objective
+          </div>
+          {/* the objective stays pinned; only the per-case detail below it scrolls */}
+          <div style={{ flexShrink: 0, maxHeight: "60%", overflowY: "auto" }}>
+            <ObjectiveCard puzzle={puzzle} evaluation={evaluation} activeTab={activeTab} onSelectTab={setActiveTab} />
+          </div>
+          <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+            <TestPanel
+              puzzle={puzzle}
+              model={model}
+              evaluation={evaluation}
+              scratchTokens={scratchTokens}
+              onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
+              activeTab={activeTab}
+            />
+          </div>
         </Panel>
       </div>
     </div>

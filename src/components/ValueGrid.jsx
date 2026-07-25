@@ -100,7 +100,9 @@ function GridRow({ row, i, label, format, cellStyleAt }) {
             padding: "3px 4px",
             borderRadius: 3,
             background: "rgba(30,30,30,0.55)",
-            border: `1px solid ${COLORS.panelBorder}`,
+            borderWidth: 1,
+            borderStyle: "solid",
+            borderColor: COLORS.panelBorder,
             color: value === 0 ? COLORS.textMuted : COLORS.text,
             ...(cellStyleAt ? cellStyleAt(i, j, value) : null),
           }}
