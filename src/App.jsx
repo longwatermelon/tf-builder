@@ -71,9 +71,10 @@ function loadProgress() {
   }
 }
 
-function Panel({ children, style }) {
+function Panel({ children, style, ref }) {
   return (
     <div
+      ref={ref}
       style={{
         background: COLORS.panel,
         border: `1px solid ${COLORS.panelBorder}`,
@@ -91,7 +92,16 @@ function Panel({ children, style }) {
   );
 }
 
-export default function App() {
+// guideRefs are optional walkthrough anchors supplied by RootApp
+export default function App({ guideRefs = {} }) {
+  const {
+    headerRef = null,
+    puzzlesRef = null,
+    objectiveRef = null,
+    weightsRef = null,
+    stackRef = null,
+  } = guideRefs;
+
   const [activePuzzleId, setActivePuzzleId] = useState(PUZZLES[0].id);
   const puzzle = getPuzzle(activePuzzleId);
 
@@ -263,6 +273,7 @@ export default function App() {
       }}
     >
       <header
+        ref={headerRef}
         style={{
           display: "flex",
           alignItems: "center",
@@ -318,7 +329,7 @@ export default function App() {
       {/* the gutters between panels double as drag handles, so the row itself has no gap;
           below four minimum-width panels it scrolls rather than clipping the last one */}
       <div ref={rowRef} style={{ flex: 1, display: "flex", padding: ROW_PADDING, minHeight: 0, overflowX: "auto" }}>
-        <Panel style={{ flex: `0 0 ${panelWidths[0]}px` }}>
+        <Panel ref={puzzlesRef} style={{ flex: `0 0 ${panelWidths[0]}px` }}>
           <PuzzleLibrary puzzles={PUZZLES} activeId={activePuzzleId} progress={progress} onSelect={selectPuzzle} />
         </Panel>
 
@@ -332,7 +343,7 @@ export default function App() {
           onNudge={(delta) => nudgePanel(0, delta)}
         />
 
-        <Panel style={{ flex: `0 0 ${panelWidths[1]}px` }}>
+        <Panel ref={objectiveRef} style={{ flex: `0 0 ${panelWidths[1]}px` }}>
           <div
             style={{
               padding: "10px 12px 8px",
@@ -378,7 +389,7 @@ export default function App() {
           onNudge={(delta) => nudgePanel(1, delta)}
         />
 
-        <Panel style={{ flex: "1 1 0", minWidth: MIN_PANEL_WIDTH }}>
+        <Panel ref={weightsRef} style={{ flex: "1 1 0", minWidth: MIN_PANEL_WIDTH }}>
           <div
             style={{
               padding: "10px 12px 6px",
@@ -420,7 +431,7 @@ export default function App() {
           onNudge={(delta) => nudgePanel(2, -delta)}
         />
 
-        <Panel style={{ flex: `0 0 ${panelWidths[2]}px` }}>
+        <Panel ref={stackRef} style={{ flex: `0 0 ${panelWidths[2]}px` }}>
           <ModuleStack
             model={model}
             puzzle={puzzle}
