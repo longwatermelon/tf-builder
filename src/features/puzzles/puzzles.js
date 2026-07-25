@@ -85,6 +85,7 @@ function prevTokenSolution() {
       },
       {
         ...createLinear({ dOut: 3 }),
+        useB: false,
         W: withEntries(6, 3, [[3, 0, LOGIT_SCALE], [4, 1, LOGIT_SCALE], [5, 2, LOGIT_SCALE]]),
       },
     ],
@@ -125,7 +126,11 @@ function classifySolution() {
         ...createEmbed({ useE: true, useP: false }),
         W_E: withEntries(7, 1, [[0, 0, 1], [1, 0, 1], [2, 0, 1], [3, 0, -1], [4, 0, -1]]),
       },
-      { ...createLinear({ dOut: 7 }), W: withEntries(1, 7, [[0, 5, LOGIT_SCALE], [0, 6, -LOGIT_SCALE]]) },
+      {
+        ...createLinear({ dOut: 7 }),
+        useB: false,
+        W: withEntries(1, 7, [[0, 5, LOGIT_SCALE], [0, 6, -LOGIT_SCALE]]),
+      },
     ],
   };
 }
@@ -201,6 +206,7 @@ function matchFirstSolution() {
       },
       {
         ...createMlp({ dHidden: 3 }),
+        useB2: false,
         // hidden unit k fires only when both one-hots carry a 1 in dim k
         W1: withEntries(7, 3, [...blockEntries(0, 0, 3, 1), ...blockEntries(3, 0, 3, 1)]),
         b1: [-1, -1, -1],
@@ -240,7 +246,7 @@ function inductionSolution() {
         W_O: withEntries(3, 9, blockEntries(0, 6, 3, 1)),
         mask: causalMask(6),
       },
-      { ...createLinear({ dOut: 3 }), W: withEntries(9, 3, blockEntries(6, 0, 3, LOGIT_SCALE)) },
+      { ...createLinear({ dOut: 3 }), useB: false, W: withEntries(9, 3, blockEntries(6, 0, 3, LOGIT_SCALE)) },
     ],
   };
 }

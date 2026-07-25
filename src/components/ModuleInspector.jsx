@@ -26,7 +26,7 @@ function Stepper({ label, value, min, max, onChange }) {
   );
 }
 
-// on/off switch for optional parameter blocks (W_E, W_P, attention mask)
+// on/off switch for optional parameter blocks
 function Toggle({ label, checked, onChange }) {
   return (
     <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: COLORS.text, cursor: "pointer" }}>
@@ -154,10 +154,12 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
   }
 
   if (module.type === "mlp") {
+    const hiddenBiasTerm = module.useB1 ? " + b_1" : "";
+    const outputBiasTerm = module.useB2 ? " + b_2" : "";
     return (
       <div>
-        <Equation tex={"H = \\mathrm{ReLU}(XW_1 + b_1) \\\\[4pt] X \\mathrel{+}= HW_2 + b_2"} />
-        <div style={{ marginBottom: 14 }}>
+        <Equation tex={`H = \\mathrm{ReLU}(XW_1${hiddenBiasTerm}) \\\\[4pt] X \\mathrel{+}= HW_2${outputBiasTerm}`} />
+        <div style={{ display: "flex", gap: 18, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
           <Stepper
             label="d_hidden"
             value={module.dHidden}
@@ -165,6 +167,8 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             max={16}
             onChange={(dHidden) => onChange({ ...module, dHidden })}
           />
+          <Toggle label="b_1" checked={module.useB1} onChange={(useB1) => onChange({ ...module, useB1 })} />
+          <Toggle label="b_2" checked={module.useB2} onChange={(useB2) => onChange({ ...module, useB2 })} />
         </div>
         <MatrixEditor
           titleTex="W_1"
@@ -176,16 +180,18 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
           colAxis="hidden unit"
           accent={accent}
         />
-        <MatrixEditor
-          titleTex="b_1"
-          matrix={[module.b1]}
-          onChange={(next) => onChange({ ...module, b1: next[0] })}
-          rowLabels={[""]}
-          colLabels={dimLabels(module.dHidden, "h")}
-          colAxis="hidden unit"
-          fills={[FILL_ZERO]}
-          accent={accent}
-        />
+        {module.useB1 ? (
+          <MatrixEditor
+            titleTex="b_1"
+            matrix={[module.b1]}
+            onChange={(next) => onChange({ ...module, b1: next[0] })}
+            rowLabels={[""]}
+            colLabels={dimLabels(module.dHidden, "h")}
+            colAxis="hidden unit"
+            fills={[FILL_ZERO]}
+            accent={accent}
+          />
+        ) : null}
         <MatrixEditor
           titleTex="W_2"
           matrix={module.W2}
@@ -196,16 +202,18 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
           colAxis="residual dim"
           accent={accent}
         />
-        <MatrixEditor
-          titleTex="b_2"
-          matrix={[module.b2]}
-          onChange={(next) => onChange({ ...module, b2: next[0] })}
-          rowLabels={[""]}
-          colLabels={dimLabels(dIn, "d")}
-          colAxis="residual dim"
-          fills={[FILL_ZERO]}
-          accent={accent}
-        />
+        {module.useB2 ? (
+          <MatrixEditor
+            titleTex="b_2"
+            matrix={[module.b2]}
+            onChange={(next) => onChange({ ...module, b2: next[0] })}
+            rowLabels={[""]}
+            colLabels={dimLabels(dIn, "d")}
+            colAxis="residual dim"
+            fills={[FILL_ZERO]}
+            accent={accent}
+          />
+        ) : null}
       </div>
     );
   }
@@ -213,11 +221,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
   // linear is the only module that resizes the stream, so its output may be the logit axis
   const isLogitLayer = module.dOut === vocab.length;
   const outLabels = isLogitLayer ? vocab : dimLabels(module.dOut, "u");
+  const biasTerm = module.useB ? " + b" : "";
   return (
     <div>
-      <Equation tex={"X \\leftarrow XW + b"} />
+      <Equation tex={`X \\leftarrow XW${biasTerm}`} />
       <div style={{ display: "flex", gap: 18, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <Stepper label="d_out" value={module.dOut} min={1} max={16} onChange={(dOut) => onChange({ ...module, dOut })} />
+        <Toggle label="b" checked={module.useB} onChange={(useB) => onChange({ ...module, useB })} />
         {isLogitLayer ? (
           <span style={{ fontSize: 10, color: COLORS.success }}>width matches the vocabulary — usable as unembedding</span>
         ) : null}
@@ -233,16 +243,18 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
         fills={[FILL_ZERO, FILL_IDENTITY]}
         accent={accent}
       />
-      <MatrixEditor
-        titleTex="b"
-        matrix={[module.b]}
-        onChange={(next) => onChange({ ...module, b: next[0] })}
-        rowLabels={[""]}
-        colLabels={outLabels}
-        colAxis={isLogitLayer ? "token" : "output dim"}
-        fills={[FILL_ZERO]}
-        accent={accent}
-      />
+      {module.useB ? (
+        <MatrixEditor
+          titleTex="b"
+          matrix={[module.b]}
+          onChange={(next) => onChange({ ...module, b: next[0] })}
+          rowLabels={[""]}
+          colLabels={outLabels}
+          colAxis={isLogitLayer ? "token" : "output dim"}
+          fills={[FILL_ZERO]}
+          accent={accent}
+        />
+      ) : null}
     </div>
   );
 }

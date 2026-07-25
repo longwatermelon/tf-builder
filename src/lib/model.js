@@ -38,11 +38,11 @@ export function createAttn({ dHead = 2, useMask = false } = {}) {
 }
 
 export function createMlp({ dHidden = 2 } = {}) {
-  return { id: makeId("mlp"), type: "mlp", dHidden, W1: [], b1: [], W2: [], b2: [] };
+  return { id: makeId("mlp"), type: "mlp", dHidden, useB1: true, useB2: true, W1: [], b1: [], W2: [], b2: [] };
 }
 
 export function createLinear({ dOut = 2 } = {}) {
-  return { id: makeId("linear"), type: "linear", dOut, W: [], b: [] };
+  return { id: makeId("linear"), type: "linear", dOut, useB: true, W: [], b: [] };
 }
 
 // starting model for a fresh puzzle attempt: a single embedding, sized so the stream is already
@@ -130,9 +130,9 @@ export function moduleParamCount(module, dIn, puzzle) {
   }
   if (module.type === "mlp") {
     const dh = module.dHidden;
-    return dIn * dh + dh + dh * dIn + dIn;
+    return dIn * dh + (module.useB1 ? dh : 0) + dh * dIn + (module.useB2 ? dIn : 0);
   }
-  return dIn * module.dOut + module.dOut;
+  return dIn * module.dOut + (module.useB ? module.dOut : 0);
 }
 
 // total allocated float parameters across the stack
@@ -193,11 +193,14 @@ export function forward(model, puzzle, tokenIds) {
       extras.push({ key: "pattern", label: "Attention pattern A", matrix: result.pattern, kind: "pattern" });
       x = addMatrix(x, result.out);
     } else if (module.type === "mlp") {
-      const hidden = reluMatrix(addRowVec(matmul(x, module.W1), module.b1));
+      const hiddenInput = matmul(x, module.W1);
+      const hidden = reluMatrix(module.useB1 ? addRowVec(hiddenInput, module.b1) : hiddenInput);
       extras.push({ key: "hidden", label: "Hidden (post-ReLU)", matrix: hidden, kind: "stream" });
-      x = addMatrix(x, addRowVec(matmul(hidden, module.W2), module.b2));
+      const mlpOutput = matmul(hidden, module.W2);
+      x = addMatrix(x, module.useB2 ? addRowVec(mlpOutput, module.b2) : mlpOutput);
     } else {
-      x = addRowVec(matmul(x, module.W), module.b);
+      const linearOutput = matmul(x, module.W);
+      x = module.useB ? addRowVec(linearOutput, module.b) : linearOutput;
       width = module.dOut;
     }
 
