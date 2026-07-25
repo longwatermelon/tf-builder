@@ -62,15 +62,20 @@ export default function NumberCell({
         const input = event.currentTarget;
         // a fully selected cell counts as both edges so the first arrow press already moves
         const allSelected = input.selectionStart === 0 && input.selectionEnd === input.value.length;
-        const shortcut = !event.metaKey && !event.ctrlKey && !event.altKey && allSelected
+        const shortcut = !event.metaKey && !event.ctrlKey && !event.altKey
           ? VALUE_SHORTCUTS[event.key.toLowerCase()]
           : null;
         if (shortcut) {
           event.preventDefault();
-          setDraft(shortcut);
-          const parsed = parseNumberText(shortcut, allowInfinity);
+          const selectionStart = input.selectionStart ?? input.value.length;
+          const selectionEnd = input.selectionEnd ?? selectionStart;
+          const next = `${input.value.slice(0, selectionStart)}${shortcut}${input.value.slice(selectionEnd)}`;
+          const nextCursor = selectionStart + shortcut.length;
+          setDraft(next);
+          const parsed = parseNumberText(next, allowInfinity);
           setInvalid(parsed === null);
           if (parsed !== null) onCommit(parsed);
+          requestAnimationFrame(() => input.setSelectionRange(nextCursor, nextCursor));
           return;
         }
         if (!onNav) return;

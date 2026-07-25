@@ -7,9 +7,9 @@ export function parseNumberText(text, allowInfinity = false) {
   const lowered = trimmed.toLowerCase();
   if (lowered === "inf" || lowered === "+inf" || lowered === "infinity") return allowInfinity ? Infinity : null;
   if (lowered === "-inf" || lowered === "-infinity") return allowInfinity ? -Infinity : null;
-  if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(trimmed)) return null;
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(trimmed)) return null;
   const value = Number(trimmed);
-  // an overflowing literal like 1e999 must not sneak infinity past allowInfinity
+  // oversized decimals must not sneak infinity past allowInfinity
   return Number.isFinite(value) ? value : null;
 }
 
