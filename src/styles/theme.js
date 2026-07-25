@@ -24,7 +24,17 @@ export const MODULE_COLORS = {
   attn: "#c586c0",
   mlp: "#dcdcaa",
   linear: "#4ec9b0",
+  softmax: "#9cdcfe",
 };
+
+// global ui scale, roughly one browser zoom step; pointer pixels must be divided by it
+export const UI_ZOOM = 1.1;
+
+// background tint for a probability cell, so more probability mass reads as a stronger fill
+export function probabilityFill(p) {
+  const clamped = Math.min(Math.max(p, 0), 1);
+  return `rgba(0, 152, 255, ${(0.04 + 0.46 * clamped).toFixed(3)})`;
+}
 
 export const DIFFICULTY_COLORS = {
   tutorial: "#4ec9b0",

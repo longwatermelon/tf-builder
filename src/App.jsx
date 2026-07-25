@@ -15,7 +15,7 @@ import {
   evaluatePuzzle,
   reconcileShapes,
 } from "./lib/model";
-import { COLORS, DIFFICULTY_COLORS, MONO, btnStyle, subtleBtnStyle } from "./styles/theme";
+import { COLORS, DIFFICULTY_COLORS, MONO, UI_ZOOM, btnStyle, subtleBtnStyle } from "./styles/theme";
 
 const PROGRESS_KEY = "tf-builder:progress";
 
@@ -25,8 +25,9 @@ const ROW_PADDING = 8;
 
 const MIN_PANEL_WIDTH = 150;
 
-// pixel widths of every panel but the last, which absorbs whatever space is left
-const DEFAULT_WIDTHS = [218, 250, 560];
+// pixel widths of the puzzles, objective and architecture panels; the weights panel between the
+// last two absorbs whatever space is left
+const DEFAULT_WIDTHS = [250, 400, 280];
 
 // space the panels themselves can occupy, excluding the row padding and the gutters
 function measureAvailable(row) {
@@ -34,14 +35,14 @@ function measureAvailable(row) {
   return row.clientWidth - ROW_PADDING * 2 - HANDLE_WIDTH * DEFAULT_WIDTHS.length;
 }
 
-// hold a panel between its minimum and the width the last panel can still spare
+// hold a panel between its minimum and the width the flexible weights panel can still spare
 function clampPanelWidth(widths, index, width, available) {
   const used = widths.reduce((sum, w) => sum + w, 0);
   const slack = Math.max(0, available - used - MIN_PANEL_WIDTH);
   return Math.min(Math.max(width, MIN_PANEL_WIDTH), widths[index] + slack);
 }
 
-// shrink leading panels from the right until they fit alongside a minimum-width last panel
+// shrink fixed panels from the right until they fit alongside a minimum-width weights panel
 function fitWidths(widths, available) {
   const next = widths.map((w) => Math.max(MIN_PANEL_WIDTH, w));
   let overflow = next.reduce((sum, w) => sum + w, 0) + MIN_PANEL_WIDTH - available;
@@ -146,7 +147,7 @@ export default function App() {
     dragWidthsRef.current = panelWidths;
   }
 
-  // dragging gutter `index` resizes only the panel to its left; the last panel takes up the slack.
+  // dragging a gutter resizes only the panel it belongs to; the weights panel takes up the slack.
   // the snapshot supplies the requested width, but the clamp reads live state so a window resize
   // mid-drag is not undone by the next pointer move
   function resizePanel(index, dx) {
@@ -245,7 +246,17 @@ export default function App() {
   const passedCount = evaluation.results.filter((r) => r.ok).length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: COLORS.bg, color: COLORS.text }}>
+    // the zoom scales the whole app one step up; every px below is laid out inside that scale
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        background: COLORS.bg,
+        color: COLORS.text,
+        zoom: UI_ZOOM,
+      }}
+    >
       <header
         style={{
           display: "flex",
@@ -317,20 +328,41 @@ export default function App() {
         />
 
         <Panel style={{ flex: `0 0 ${panelWidths[1]}px` }}>
-          <ModuleStack
-            model={model}
-            puzzle={puzzle}
-            inputWidths={inputWidths}
-            selectedId={selectedModule?.id}
-            onSelect={setSelectedModuleId}
-            onAdd={addModule}
-            onRemove={removeModule}
-            onMove={moveModule}
-          />
+          <div
+            style={{
+              padding: "10px 12px 8px",
+              fontSize: 11,
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+              color: COLORS.textMuted,
+            }}
+          >
+            Objective
+          </div>
+          {/* the objective stays pinned; only the per-case detail below it scrolls */}
+          <div style={{ flexShrink: 0, maxHeight: "60%", overflowY: "auto" }}>
+            <ObjectiveCard
+              puzzle={puzzle}
+              evaluation={evaluation}
+              scratchTokens={scratchTokens}
+              activeTab={activeTab}
+              onSelectTab={setActiveTab}
+            />
+          </div>
+          <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+            <TestPanel
+              puzzle={puzzle}
+              model={model}
+              evaluation={evaluation}
+              scratchTokens={scratchTokens}
+              onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
+              activeTab={activeTab}
+            />
+          </div>
         </Panel>
 
         <ResizeHandle
-          label="Resize architecture panel"
+          label="Resize objective panel"
           width={panelWidths[1]}
           minWidth={MIN_PANEL_WIDTH}
           maxWidth={panelWidths[1] + panelSlack}
@@ -339,7 +371,7 @@ export default function App() {
           onNudge={(delta) => nudgePanel(1, delta)}
         />
 
-        <Panel style={{ flex: `0 0 ${panelWidths[2]}px` }}>
+        <Panel style={{ flex: "1 1 0", minWidth: MIN_PANEL_WIDTH }}>
           <div
             style={{
               padding: "10px 12px 6px",
@@ -374,42 +406,28 @@ export default function App() {
           </div>
         </Panel>
 
+        {/* this gutter sits to the right of the panel it sizes, so its drag direction is inverted */}
         <ResizeHandle
-          label="Resize weights panel"
+          label="Resize architecture panel"
           width={panelWidths[2]}
           minWidth={MIN_PANEL_WIDTH}
           maxWidth={panelWidths[2] + panelSlack}
           onDragStart={startResize}
-          onDragMove={(dx) => resizePanel(2, dx)}
-          onNudge={(delta) => nudgePanel(2, delta)}
+          onDragMove={(dx) => resizePanel(2, -dx)}
+          onNudge={(delta) => nudgePanel(2, -delta)}
         />
 
-        <Panel style={{ flex: "1 1 0", minWidth: MIN_PANEL_WIDTH }}>
-          <div
-            style={{
-              padding: "10px 12px 8px",
-              fontSize: 11,
-              letterSpacing: 0.8,
-              textTransform: "uppercase",
-              color: COLORS.textMuted,
-            }}
-          >
-            Objective
-          </div>
-          {/* the objective stays pinned; only the per-case detail below it scrolls */}
-          <div style={{ flexShrink: 0, maxHeight: "60%", overflowY: "auto" }}>
-            <ObjectiveCard puzzle={puzzle} evaluation={evaluation} activeTab={activeTab} onSelectTab={setActiveTab} />
-          </div>
-          <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-            <TestPanel
-              puzzle={puzzle}
-              model={model}
-              evaluation={evaluation}
-              scratchTokens={scratchTokens}
-              onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
-              activeTab={activeTab}
-            />
-          </div>
+        <Panel style={{ flex: `0 0 ${panelWidths[2]}px` }}>
+          <ModuleStack
+            model={model}
+            puzzle={puzzle}
+            inputWidths={inputWidths}
+            selectedId={selectedModule?.id}
+            onSelect={setSelectedModuleId}
+            onAdd={addModule}
+            onRemove={removeModule}
+            onMove={moveModule}
+          />
         </Panel>
       </div>
     </div>

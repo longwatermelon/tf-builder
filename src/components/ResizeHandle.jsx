@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { COLORS } from "../styles/theme";
+import { COLORS, UI_ZOOM } from "../styles/theme";
 
 export const HANDLE_WIDTH = 8;
 
@@ -39,9 +39,10 @@ export default function ResizeHandle({ label, width, minWidth, maxWidth, onDragS
     onDragStart();
   }
 
+  // pointer coordinates are screen pixels, but panel widths live inside the app's zoom
   function handlePointerMove(event) {
     if (pointerIdRef.current !== event.pointerId) return;
-    onDragMove(event.clientX - startXRef.current);
+    onDragMove((event.clientX - startXRef.current) / UI_ZOOM);
   }
 
   function handlePointerUp(event) {

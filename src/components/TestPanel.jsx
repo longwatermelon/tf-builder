@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatProbability } from "../lib/format";
 import { forward, streamColLabels } from "../lib/model";
-import { COLORS, MODULE_COLORS, MONO, smallBtnStyle, subtleBtnStyle } from "../styles/theme";
+import { COLORS, MODULE_COLORS, MONO, probabilityFill, smallBtnStyle, subtleBtnStyle } from "../styles/theme";
 import ValueGrid from "./ValueGrid";
 
 // "0:a" style position labels so rows are unambiguous
@@ -168,13 +168,15 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
               rowAxis="position"
               colAxis="output token"
               format={formatProbability}
-              cellStyleAt={(i, j) => {
+              cellStyleAt={(i, j, value) => {
+                // fill intensity tracks the probability mass, so the winning token is visible at a glance
+                const heat = { background: probabilityFill(value), color: value >= 0.5 ? COLORS.textBright : COLORS.text };
                 const targetId = targets ? vocab.indexOf(targets[i]) : -1;
                 if (j === targetId) {
                   const ok = grades?.[i]?.ok;
-                  return { borderColor: ok ? COLORS.success : COLORS.negative, color: COLORS.textBright };
+                  return { ...heat, borderColor: ok ? COLORS.success : COLORS.negative, color: COLORS.textBright };
                 }
-                return null;
+                return heat;
               }}
             />
           ) : null}

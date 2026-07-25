@@ -15,15 +15,13 @@ function moduleSubtitle(module) {
 }
 
 // connector under a module: shows the width it emits and offers an insert point below it
-function Connector({ width, isFinal, expected, insertIndex, isOpen, onToggle, onAdd }) {
-  const bad = isFinal && width !== expected;
+function Connector({ width, bad, insertIndex, isOpen, onToggle, onAdd }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0 3px 10px", minHeight: 22 }}>
         <span style={{ color: COLORS.panelBorder, fontSize: 12, lineHeight: 1 }}>│</span>
         <span style={{ fontFamily: MONO, fontSize: 10, color: bad ? COLORS.negative : COLORS.textMuted }}>
           width {width}
-          {isFinal ? (bad ? ` — needs ${expected}` : " → softmax") : ""}
         </span>
         <button
           type="button"
@@ -53,6 +51,33 @@ function Connector({ width, isFinal, expected, insertIndex, isOpen, onToggle, on
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// the stack always ends in a softmax; it holds no weights, so it is drawn rather than modelled
+function SoftmaxCard({ inputWidth, expected }) {
+  const bad = inputWidth !== expected;
+  return (
+    <div
+      style={{
+        border: `1px solid ${bad ? COLORS.negative : COLORS.panelBorder}`,
+        background: COLORS.surface,
+        borderRadius: 5,
+        padding: "7px 9px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <span style={{ width: 7, height: 7, borderRadius: 2, background: MODULE_COLORS.softmax, flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textBright }}>Softmax</span>
+        <span style={{ fontFamily: MONO, fontSize: 10, color: COLORS.textMuted, marginLeft: "auto" }}>0p</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+        <span style={{ fontFamily: MONO, fontSize: 10, color: bad ? COLORS.negative : COLORS.textMuted }}>
+          {bad ? `needs width ${expected}` : `over ${expected} tokens`}
+        </span>
+        <span style={{ fontSize: 9, color: COLORS.textMuted, marginLeft: "auto" }}>always last</span>
+      </div>
     </div>
   );
 }
@@ -147,8 +172,7 @@ export default function ModuleStack({ model, puzzle, inputWidths, selectedId, on
               </div>
               <Connector
                 width={width}
-                isFinal={isLast}
-                expected={puzzle.vocab.length}
+                bad={isLast && width !== puzzle.vocab.length}
                 insertIndex={i + 1}
                 isOpen={openInsertAfterId === module.id}
                 onToggle={() => setOpenInsertAfterId((prev) => (prev === module.id ? null : module.id))}
@@ -158,16 +182,7 @@ export default function ModuleStack({ model, puzzle, inputWidths, selectedId, on
           );
         })}
 
-        <div
-          style={{
-            fontFamily: MONO,
-            fontSize: 10,
-            color: finalWidth === puzzle.vocab.length ? COLORS.success : COLORS.negative,
-            paddingLeft: 10,
-          }}
-        >
-          softmax → output distribution
-        </div>
+        <SoftmaxCard inputWidth={finalWidth} expected={puzzle.vocab.length} />
       </div>
     </div>
   );
