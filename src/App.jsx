@@ -391,6 +391,7 @@ export default function App() {
             }}
           >
             Weights
+            <span style={{ fontSize: 10, letterSpacing: 0, textTransform: "none" }}>q: − · w: 0 · e: inf</span>
           </div>
           <div style={{ flex: 1, overflow: "auto", padding: "0 14px 14px" }}>
             {selectedModule ? (
