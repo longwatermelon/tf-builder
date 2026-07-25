@@ -1,0 +1,71 @@
+:root {
+  color-scheme: dark;
+  font-family: "Sora", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* global reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* shared scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #555;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #6a6a6a;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+html,
+body {
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+/* strip spinner arrows from numeric-looking cells */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* katex should inherit the surrounding text color */
+.katex {
+  color: inherit;
+  font-size: 1em;
+}
