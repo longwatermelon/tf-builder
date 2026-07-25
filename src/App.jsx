@@ -6,6 +6,7 @@ import PuzzleLibrary from "./components/PuzzleLibrary";
 import ResizeHandle, { HANDLE_WIDTH } from "./components/ResizeHandle";
 import TestPanel from "./components/TestPanel";
 import { buildSolution, getPuzzle, PUZZLES } from "./features/puzzles/puzzles";
+import { computeStreamAxes, setLabel } from "./lib/axisLabels";
 import {
   computeInputWidths,
   createAttn,
@@ -24,6 +25,9 @@ const PROGRESS_STATUSES = ["solved", "elegant"];
 const ROW_PADDING = 8;
 
 const MIN_PANEL_WIDTH = 150;
+
+// shared empty label store, so a puzzle with no custom names keeps a stable prop identity
+const NO_LABELS = {};
 
 // pixel widths of the puzzles, objective and architecture panels; the weights panel between the
 // last two absorbs whatever space is left
@@ -108,6 +112,8 @@ export default function App({ guideRefs = {}, uiZoom }) {
   // one in-progress model per puzzle so switching puzzles never loses work
   const [models, setModels] = useState(() => ({ [PUZZLES[0].id]: createInitialModel(PUZZLES[0]) }));
   const [scratchByPuzzle, setScratchByPuzzle] = useState(() => ({ [PUZZLES[0].id]: defaultScratch(PUZZLES[0]) }));
+  // custom dimension names per puzzle, so annotating d0 in one puzzle leaves the others alone
+  const [labelsByPuzzle, setLabelsByPuzzle] = useState({});
   const [selectedModuleId, setSelectedModuleId] = useState(() => models[PUZZLES[0].id].modules[0].id);
   const [activeTab, setActiveTab] = useState(null);
   const [revealedIds, setRevealedIds] = useState(() => new Set());
@@ -120,10 +126,13 @@ export default function App({ guideRefs = {}, uiZoom }) {
   const model = models[activePuzzleId];
   const scratchTokens = scratchByPuzzle[activePuzzleId] ?? defaultScratch(puzzle);
   const inputWidths = useMemo(() => computeInputWidths(model), [model]);
+  const streamAxes = useMemo(() => computeStreamAxes(model, puzzle), [model, puzzle]);
   const evaluation = useMemo(() => evaluatePuzzle(model, puzzle), [model, puzzle]);
+  const labels = labelsByPuzzle[activePuzzleId] ?? NO_LABELS;
   const selectedIndex = model.modules.findIndex((m) => m.id === selectedModuleId);
   const selectedModule = selectedIndex >= 0 ? model.modules[selectedIndex] : model.modules[0];
   const selectedWidth = selectedIndex >= 0 ? inputWidths[selectedIndex] : model.dModel;
+  const selectedStreamAxis = streamAxes.inputs[selectedIndex >= 0 ? selectedIndex : 0];
   // how far any one panel can still grow before the last panel hits its minimum
   const panelSlack = Math.max(0, availableWidth - panelWidths.reduce((sum, w) => sum + w, 0) - MIN_PANEL_WIDTH);
 
@@ -187,6 +196,14 @@ export default function App({ guideRefs = {}, uiZoom }) {
       const width = clampPanelWidth(prev, index, prev[index] + delta, availableWidth);
       return prev.map((w, i) => (i === index ? width : w));
     });
+  }
+
+  // name one index of an axis for the active puzzle; an empty name restores the default
+  function renameLabel(axisKey, index, name) {
+    setLabelsByPuzzle((prev) => ({
+      ...prev,
+      [activePuzzleId]: setLabel(prev[activePuzzleId] ?? NO_LABELS, axisKey, index, name),
+    }));
   }
 
   function updateModel(nextModel) {
@@ -373,6 +390,8 @@ export default function App({ guideRefs = {}, uiZoom }) {
                 scratchTokens={scratchTokens}
                 onChangeScratch={(tokens) => setScratchByPuzzle((prev) => ({ ...prev, [activePuzzleId]: tokens }))}
                 activeTab={activeTab}
+                streamAxes={streamAxes}
+                labels={labels}
               />
             ) : null}
           </div>
@@ -403,7 +422,7 @@ export default function App({ guideRefs = {}, uiZoom }) {
           >
             Weights
             <span style={{ fontSize: 10, letterSpacing: 0, textTransform: "none" }}>
-              q: − · w: 0 · e: 1000 · r: inf
+              q: − · w: 0 · e: 1000 · r: inf · click a label to name it
             </span>
           </div>
           <div style={{ flex: 1, overflow: "auto", padding: "0 14px 14px" }}>
@@ -413,6 +432,9 @@ export default function App({ guideRefs = {}, uiZoom }) {
                 dIn={selectedWidth}
                 dModel={model.dModel}
                 puzzle={puzzle}
+                streamAxisKey={selectedStreamAxis}
+                labels={labels}
+                onRenameLabel={renameLabel}
                 onChange={(next) =>
                   updateModel({ ...model, modules: model.modules.map((m) => (m.id === next.id ? next : m)) })
                 }

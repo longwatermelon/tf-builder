@@ -1,12 +1,25 @@
 import { useState } from "react";
+import {
+  defaultLabels,
+  moduleAxis,
+  POSITION_AXIS,
+  resolveLabels,
+  streamDefaults,
+  VOCAB_AXIS,
+} from "../lib/axisLabels";
 import { formatProbability } from "../lib/format";
-import { forward, streamColLabels } from "../lib/model";
+import { forward } from "../lib/model";
 import { COLORS, MODULE_COLORS, MONO, probabilityFill, smallBtnStyle, subtleBtnStyle } from "../styles/theme";
 import ValueGrid from "./ValueGrid";
 
-// "0:a" style position labels so rows are unambiguous
-function positionLabels(tokens) {
-  return tokens.map((token, i) => `${i}:${token}`);
+// "0:a" style position labels so rows are unambiguous, carrying any name given to the position
+function positionLabels(tokens, labels) {
+  const names = resolveLabels(
+    labels,
+    POSITION_AXIS,
+    tokens.map((_, i) => String(i)),
+  );
+  return tokens.map((token, i) => `${names[i]}:${token}`);
 }
 
 // token / required / produced alignment table for one sequence
@@ -72,10 +85,21 @@ function SequenceTable({ tokens, targets, grades, vocab }) {
   );
 }
 
-export default function TestPanel({ puzzle, model, evaluation, scratchTokens, onChangeScratch, activeTab }) {
+export default function TestPanel({
+  puzzle,
+  model,
+  evaluation,
+  scratchTokens,
+  onChangeScratch,
+  activeTab,
+  streamAxes,
+  labels,
+}) {
   const [showInternals, setShowInternals] = useState(false);
   const isScratch = activeTab === "scratch";
   const vocab = puzzle.vocab;
+  // computed values carry the same dimension names the weight editors show
+  const vocabLabels = resolveLabels(labels, VOCAB_AXIS, vocab);
   // some puzzles keep label-only tokens in the vocabulary, so scratch cycles the input alphabet
   const inputVocab = puzzle.validationVocab ?? puzzle.inputVocab ?? vocab;
   const fixedPrefix = puzzle.validationPrefix ?? [];
@@ -87,6 +111,7 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
     ? forward(model, puzzle, tokens.map((t) => vocab.indexOf(t)))
     : evaluation.results[activeTab]?.pass;
 
+  const posLabels = positionLabels(tokens, labels);
   const probs = pass?.probs ?? null;
   const scratchGrades =
     isScratch && probs ? probs.map((row) => ({ ok: null, topId: row.indexOf(Math.max(...row)) })) : null;
@@ -166,8 +191,8 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
           {probs ? (
             <ValueGrid
               matrix={probs}
-              rowLabels={positionLabels(tokens)}
-              colLabels={vocab}
+              rowLabels={posLabels}
+              colLabels={vocabLabels}
               rowAxis="position"
               colAxis="output token"
               format={formatProbability}
@@ -192,6 +217,10 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
             ? pass.stages.map((stage, index) => {
                 const accent = MODULE_COLORS[stage.type];
                 const isLogits = index === pass.stages.length - 1 && stage.width === vocab.length;
+                // names come from the axis the stream is actually on, but the final stage is read as
+                // logits, so it is spelled with the vocabulary even when no linear moved it there
+                const streamKey = streamAxes.outputs[index];
+                const streamNames = isLogits ? vocab : streamDefaults(streamKey, stage.width, puzzle);
                 return (
                   <div key={stage.moduleId} style={{ marginTop: 14 }}>
                     <div style={{ fontSize: 10, color: accent, marginBottom: 4, fontWeight: 600 }}>
@@ -205,9 +234,15 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
                           <div style={{ fontSize: 9, color: COLORS.textMuted, marginBottom: 3 }}>{extra.label}</div>
                           <ValueGrid
                             matrix={extra.matrix}
-                            rowLabels={positionLabels(tokens)}
+                            rowLabels={posLabels}
                             colLabels={
-                              isPattern ? positionLabels(tokens) : Array.from({ length: hiddenWidth }, (_, h) => `h${h}`)
+                              isPattern
+                                ? posLabels
+                                : resolveLabels(
+                                    labels,
+                                    moduleAxis(stage.moduleId, "h"),
+                                    defaultLabels(hiddenWidth, "h"),
+                                  )
                             }
                             rowAxis={isPattern ? "query" : "position"}
                             colAxis={isPattern ? "key" : "hidden unit"}
@@ -217,8 +252,8 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
                     })}
                     <ValueGrid
                       matrix={stage.matrix}
-                      rowLabels={positionLabels(tokens)}
-                      colLabels={streamColLabels(stage.width, puzzle, isLogits)}
+                      rowLabels={posLabels}
+                      colLabels={resolveLabels(labels, streamKey, streamNames)}
                       rowAxis="position"
                       colAxis={isLogits ? "token" : "residual dim"}
                     />

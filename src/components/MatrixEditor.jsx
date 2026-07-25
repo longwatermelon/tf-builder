@@ -1,7 +1,9 @@
 import { useRef } from "react";
+import { hasLabel, resolveLabels } from "../lib/axisLabels";
 import { cloneMatrix } from "../lib/linalg";
 import { FILL_IDENTITY, FILL_ZERO } from "../lib/matrixFills";
 import { COLORS, MONO, smallBtnStyle } from "../styles/theme";
+import EditableLabel from "./EditableLabel";
 import MathText from "./MathText";
 import NumberCell from "./NumberCell";
 
@@ -16,7 +18,8 @@ function AxisLabel({ text, style }) {
   );
 }
 
-// labeled, keyboard-navigable grid of editable floats
+// labeled, keyboard-navigable grid of editable floats. rowLabels / colLabels are the generated
+// defaults; an axis key opts that side into the user's custom dimension names
 export default function MatrixEditor({
   matrix,
   onChange,
@@ -25,6 +28,10 @@ export default function MatrixEditor({
   colLabels,
   rowAxis,
   colAxis,
+  rowAxisKey,
+  colAxisKey,
+  labels = {},
+  onRenameLabel,
   fills = [FILL_ZERO, FILL_IDENTITY],
   accent = COLORS.accent,
   allowInfinity = false,
@@ -32,6 +39,10 @@ export default function MatrixEditor({
   const cellRefs = useRef(new Map());
   const rows = matrix.length;
   const cols = rows === 0 ? 0 : matrix[0].length;
+  const rowNames = resolveLabels(labels, rowAxisKey, rowLabels);
+  const colNames = resolveLabels(labels, colAxisKey, colLabels);
+  const renameRow = rowAxisKey && onRenameLabel ? (i, name) => onRenameLabel(rowAxisKey, i, name) : null;
+  const renameCol = colAxisKey && onRenameLabel ? (j, name) => onRenameLabel(colAxisKey, j, name) : null;
 
   // move focus by a (dRow, dCol) step, clamped to the grid
   function focusCell(row, col) {
@@ -96,13 +107,14 @@ export default function MatrixEditor({
             }}
           >
             <div />
-            {colLabels.map((label, j) => (
-              <div
+            {colNames.map((label, j) => (
+              <EditableLabel
                 key={`col-${j}`}
-                style={{ fontSize: 10, color: COLORS.textMuted, fontFamily: MONO, textAlign: "center" }}
-              >
-                {label}
-              </div>
+                name={label}
+                fallback={colLabels[j]}
+                isNamed={hasLabel(labels, colAxisKey, j)}
+                onRename={renameCol ? (next) => renameCol(j, next) : null}
+              />
             ))}
             {matrix.map((row, i) => (
               <Row
@@ -111,7 +123,10 @@ export default function MatrixEditor({
                 i={i}
                 rows={rows}
                 cols={cols}
-                label={rowLabels[i]}
+                label={rowNames[i]}
+                fallback={rowLabels[i]}
+                isNamed={hasLabel(labels, rowAxisKey, i)}
+                onRename={renameRow ? (next) => renameRow(i, next) : null}
                 cellRefs={cellRefs}
                 setCell={setCell}
                 focusCell={focusCell}
@@ -126,21 +141,17 @@ export default function MatrixEditor({
 }
 
 // one matrix row: left label plus its editable cells
-function Row({ row, i, rows, cols, label, cellRefs, setCell, focusCell, allowInfinity }) {
+function Row({ row, i, rows, cols, label, fallback, isNamed, onRename, cellRefs, setCell, focusCell, allowInfinity }) {
   return (
     <>
-      <div
-        style={{
-          fontSize: 10,
-          color: COLORS.textMuted,
-          fontFamily: MONO,
-          textAlign: "right",
-          paddingRight: 4,
-          minWidth: 30,
-        }}
-      >
-        {label}
-      </div>
+      <EditableLabel
+        name={label}
+        fallback={fallback}
+        isNamed={isNamed}
+        align="right"
+        onRename={onRename}
+        style={{ paddingRight: 4, minWidth: 30 }}
+      />
       {row.map((value, j) => (
         <NumberCell
           key={`cell-${i}-${j}`}

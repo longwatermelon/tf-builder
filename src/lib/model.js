@@ -141,12 +141,6 @@ export function countParams(model, puzzle) {
   return model.modules.reduce((sum, module, i) => sum + moduleParamCount(module, widths[i], puzzle), 0);
 }
 
-// column labels for a residual stream / logit matrix of the given width
-export function streamColLabels(width, puzzle, isLogits) {
-  if (isLogits) return puzzle.vocab.map((token) => token);
-  return Array.from({ length: width }, (_, i) => `d${i}`);
-}
-
 // one attention head: scores are raw QK^T (no 1/sqrt(d) scaling) plus the optional mask
 function runAttention(module, x, T) {
   const Q = matmul(x, module.W_Q);

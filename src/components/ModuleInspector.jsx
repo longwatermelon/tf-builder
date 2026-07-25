@@ -1,12 +1,14 @@
+import {
+  defaultLabels,
+  moduleAxis,
+  POSITION_AXIS,
+  streamDefaults,
+  VOCAB_AXIS,
+} from "../lib/axisLabels";
 import { FILL_CAUSAL, FILL_IDENTITY, FILL_ZERO } from "../lib/matrixFills";
 import { COLORS, MODULE_COLORS, MONO, smallBtnStyle } from "../styles/theme";
 import MatrixEditor from "./MatrixEditor";
 import MathText from "./MathText";
-
-// dim labels shared by every stream-facing axis
-function dimLabels(n, prefix) {
-  return Array.from({ length: n }, (_, i) => `${prefix}${i}`);
-}
 
 // +/- control for a module's width knob
 function Stepper({ label, value, min, max, onChange }) {
@@ -55,10 +57,26 @@ function Equation({ tex }) {
   );
 }
 
-export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange, onChangeDModel }) {
+export default function ModuleInspector({
+  module,
+  dIn,
+  dModel,
+  puzzle,
+  streamAxisKey,
+  labels,
+  onRenameLabel,
+  onChange,
+  onChangeDModel,
+}) {
   const accent = MODULE_COLORS[module.type];
   const vocab = puzzle.vocab;
   const maxLen = puzzle.maxLen;
+  // every editor renders the same label store and rename handler
+  const labelProps = { labels, onRenameLabel };
+  // the stream axis is the residual axis until a linear rewrites it, so its spelling follows the key
+  const streamLabels = (n) => streamDefaults(streamAxisKey, n, puzzle);
+  // head dims, hidden units and linear outputs are this module's own axes
+  const localAxis = (prefix) => moduleAxis(module.id, prefix);
 
   if (module.type === "embed") {
     const parts = [module.useE ? "W_E[t_i]" : null, module.useP ? "W_P[i]" : null].filter(Boolean);
@@ -76,9 +94,12 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             matrix={module.W_E}
             onChange={(W_E) => onChange({ ...module, W_E })}
             rowLabels={vocab}
-            colLabels={dimLabels(dModel, "d")}
+            colLabels={streamLabels(dModel)}
             rowAxis="token"
             colAxis="residual dim"
+            rowAxisKey={VOCAB_AXIS}
+            colAxisKey={streamAxisKey}
+            {...labelProps}
             accent={accent}
           />
         ) : null}
@@ -87,10 +108,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             titleTex="W_P"
             matrix={module.W_P}
             onChange={(W_P) => onChange({ ...module, W_P })}
-            rowLabels={dimLabels(maxLen, "p")}
-            colLabels={dimLabels(dModel, "d")}
+            rowLabels={defaultLabels(maxLen, "p")}
+            colLabels={streamLabels(dModel)}
             rowAxis="position"
             colAxis="residual dim"
+            rowAxisKey={POSITION_AXIS}
+            colAxisKey={streamAxisKey}
+            {...labelProps}
             accent={accent}
           />
         ) : null}
@@ -118,10 +142,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             titleTex={name}
             matrix={module[name]}
             onChange={(next) => onChange({ ...module, [name]: next })}
-            rowLabels={dimLabels(dIn, "d")}
-            colLabels={dimLabels(module.dHead, "h")}
+            rowLabels={streamLabels(dIn)}
+            colLabels={defaultLabels(module.dHead, "h")}
             rowAxis="residual dim"
             colAxis="head dim"
+            rowAxisKey={streamAxisKey}
+            colAxisKey={localAxis("h")}
+            {...labelProps}
             accent={accent}
           />
         ))}
@@ -129,10 +156,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
           titleTex="W_O"
           matrix={module.W_O}
           onChange={(W_O) => onChange({ ...module, W_O })}
-          rowLabels={dimLabels(module.dHead, "h")}
-          colLabels={dimLabels(dIn, "d")}
+          rowLabels={defaultLabels(module.dHead, "h")}
+          colLabels={streamLabels(dIn)}
           rowAxis="head dim"
           colAxis="residual dim"
+          rowAxisKey={localAxis("h")}
+          colAxisKey={streamAxisKey}
+          {...labelProps}
           accent={accent}
         />
         {module.useMask ? (
@@ -140,10 +170,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             titleTex="M"
             matrix={module.mask}
             onChange={(mask) => onChange({ ...module, mask })}
-            rowLabels={dimLabels(maxLen, "q")}
-            colLabels={dimLabels(maxLen, "k")}
+            rowLabels={defaultLabels(maxLen, "q")}
+            colLabels={defaultLabels(maxLen, "k")}
             rowAxis="query pos"
             colAxis="key pos"
+            rowAxisKey={POSITION_AXIS}
+            colAxisKey={POSITION_AXIS}
+            {...labelProps}
             fills={[FILL_ZERO, FILL_CAUSAL]}
             accent={accent}
             allowInfinity
@@ -174,10 +207,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
           titleTex="W_1"
           matrix={module.W1}
           onChange={(W1) => onChange({ ...module, W1 })}
-          rowLabels={dimLabels(dIn, "d")}
-          colLabels={dimLabels(module.dHidden, "h")}
+          rowLabels={streamLabels(dIn)}
+          colLabels={defaultLabels(module.dHidden, "h")}
           rowAxis="residual dim"
           colAxis="hidden unit"
+          rowAxisKey={streamAxisKey}
+          colAxisKey={localAxis("h")}
+          {...labelProps}
           accent={accent}
         />
         {module.useB1 ? (
@@ -186,8 +222,10 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             matrix={[module.b1]}
             onChange={(next) => onChange({ ...module, b1: next[0] })}
             rowLabels={[""]}
-            colLabels={dimLabels(module.dHidden, "h")}
+            colLabels={defaultLabels(module.dHidden, "h")}
             colAxis="hidden unit"
+            colAxisKey={localAxis("h")}
+            {...labelProps}
             fills={[FILL_ZERO]}
             accent={accent}
           />
@@ -196,10 +234,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
           titleTex="W_2"
           matrix={module.W2}
           onChange={(W2) => onChange({ ...module, W2 })}
-          rowLabels={dimLabels(module.dHidden, "h")}
-          colLabels={dimLabels(dIn, "d")}
+          rowLabels={defaultLabels(module.dHidden, "h")}
+          colLabels={streamLabels(dIn)}
           rowAxis="hidden unit"
           colAxis="residual dim"
+          rowAxisKey={localAxis("h")}
+          colAxisKey={streamAxisKey}
+          {...labelProps}
           accent={accent}
         />
         {module.useB2 ? (
@@ -208,8 +249,10 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
             matrix={[module.b2]}
             onChange={(next) => onChange({ ...module, b2: next[0] })}
             rowLabels={[""]}
-            colLabels={dimLabels(dIn, "d")}
+            colLabels={streamLabels(dIn)}
             colAxis="residual dim"
+            colAxisKey={streamAxisKey}
+            {...labelProps}
             fills={[FILL_ZERO]}
             accent={accent}
           />
@@ -220,7 +263,8 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
 
   // linear is the only module that resizes the stream, so its output may be the logit axis
   const isLogitLayer = module.dOut === vocab.length;
-  const outLabels = isLogitLayer ? vocab : dimLabels(module.dOut, "u");
+  const outAxisKey = isLogitLayer ? VOCAB_AXIS : localAxis("u");
+  const outLabels = isLogitLayer ? vocab : defaultLabels(module.dOut, "u");
   const biasTerm = module.useB ? " + b" : "";
   return (
     <div>
@@ -236,10 +280,13 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
         titleTex="W"
         matrix={module.W}
         onChange={(W) => onChange({ ...module, W })}
-        rowLabels={dimLabels(dIn, "d")}
+        rowLabels={streamLabels(dIn)}
         colLabels={outLabels}
         rowAxis="input dim"
         colAxis={isLogitLayer ? "token" : "output dim"}
+        rowAxisKey={streamAxisKey}
+        colAxisKey={outAxisKey}
+        {...labelProps}
         fills={[FILL_ZERO, FILL_IDENTITY]}
         accent={accent}
       />
@@ -251,6 +298,8 @@ export default function ModuleInspector({ module, dIn, dModel, puzzle, onChange,
           rowLabels={[""]}
           colLabels={outLabels}
           colAxis={isLogitLayer ? "token" : "output dim"}
+          colAxisKey={outAxisKey}
+          {...labelProps}
           fills={[FILL_ZERO]}
           accent={accent}
         />
