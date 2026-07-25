@@ -402,7 +402,9 @@ export default function App({ guideRefs = {}, uiZoom }) {
             }}
           >
             Weights
-            <span style={{ fontSize: 10, letterSpacing: 0, textTransform: "none" }}>q: − · w: 0 · e: inf</span>
+            <span style={{ fontSize: 10, letterSpacing: 0, textTransform: "none" }}>
+              q: − · w: 0 · e: 1000 · r: inf
+            </span>
           </div>
           <div style={{ flex: 1, overflow: "auto", padding: "0 14px 14px" }}>
             {selectedModule ? (

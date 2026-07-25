@@ -98,7 +98,7 @@ export default function RootApp() {
       id: "weights",
       title: "Weights",
       description:
-        "Hand-edit every weight of the selected module here. Type values directly, navigate with arrow keys, and use q to start a negative value, w to set zero, and e to set infinity in attention masks.",
+        "Hand-edit every weight of the selected module here. Type values directly, navigate with arrow keys, and use q to start a negative value, w to set zero, e to set 1000, and r to set infinity in attention masks.",
       targetRef: weightsGuideRef,
     },
     {

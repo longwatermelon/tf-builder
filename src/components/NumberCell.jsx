@@ -5,7 +5,8 @@ import { COLORS, MONO } from "../styles/theme";
 const VALUE_SHORTCUTS = {
   q: "-",
   w: "0",
-  e: "inf",
+  e: "1000",
+  r: "inf",
   s: "inf",
   d: "-inf",
 };
