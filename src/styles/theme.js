@@ -27,9 +27,6 @@ export const MODULE_COLORS = {
   softmax: "#9cdcfe",
 };
 
-// global ui scale, roughly one browser zoom step; pointer pixels must be divided by it
-export const UI_ZOOM = 1.1;
-
 // background tint for a probability cell, so more probability mass reads as a stronger fill
 export function probabilityFill(p) {
   const clamped = Math.min(Math.max(p, 0), 1);

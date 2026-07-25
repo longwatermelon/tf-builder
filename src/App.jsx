@@ -15,7 +15,7 @@ import {
   evaluatePuzzle,
   reconcileShapes,
 } from "./lib/model";
-import { COLORS, DIFFICULTY_COLORS, MONO, UI_ZOOM, btnStyle, subtleBtnStyle } from "./styles/theme";
+import { COLORS, DIFFICULTY_COLORS, MONO, btnStyle, subtleBtnStyle } from "./styles/theme";
 
 const PROGRESS_KEY = "tf-builder:progress:rule-validation-v1";
 
@@ -93,7 +93,7 @@ function Panel({ children, style, ref }) {
 }
 
 // guideRefs are optional walkthrough anchors supplied by RootApp
-export default function App({ guideRefs = {} }) {
+export default function App({ guideRefs = {}, uiZoom }) {
   const {
     headerRef = null,
     puzzlesRef = null,
@@ -163,7 +163,7 @@ export default function App({ guideRefs = {} }) {
     clampToWindow();
     window.addEventListener("resize", clampToWindow);
     return () => window.removeEventListener("resize", clampToWindow);
-  }, []);
+  }, [uiZoom]);
 
   // snapshot the widths a drag starts from so every move applies to the same baseline
   function startResize() {
@@ -267,7 +267,7 @@ export default function App({ guideRefs = {} }) {
         height: "100%",
         background: COLORS.bg,
         color: COLORS.text,
-        zoom: UI_ZOOM,
+        zoom: uiZoom,
       }}
     >
       <header
@@ -333,6 +333,7 @@ export default function App({ guideRefs = {} }) {
 
         <ResizeHandle
           label="Resize puzzles panel"
+          uiZoom={uiZoom}
           width={panelWidths[0]}
           minWidth={MIN_PANEL_WIDTH}
           maxWidth={panelWidths[0] + panelSlack}
@@ -379,6 +380,7 @@ export default function App({ guideRefs = {} }) {
 
         <ResizeHandle
           label="Resize objective panel"
+          uiZoom={uiZoom}
           width={panelWidths[1]}
           minWidth={MIN_PANEL_WIDTH}
           maxWidth={panelWidths[1] + panelSlack}
@@ -421,6 +423,7 @@ export default function App({ guideRefs = {} }) {
         {/* this gutter sits to the right of the panel it sizes, so its drag direction is inverted */}
         <ResizeHandle
           label="Resize architecture panel"
+          uiZoom={uiZoom}
           width={panelWidths[2]}
           minWidth={MIN_PANEL_WIDTH}
           maxWidth={panelWidths[2] + panelSlack}

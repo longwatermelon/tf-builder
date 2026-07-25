@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { btnStyle, COLORS, subtleBtnStyle, UI_ZOOM } from "../styles/theme";
+import { btnStyle, COLORS, subtleBtnStyle } from "../styles/theme";
 
 const SPOTLIGHT_PADDING = 10;
 const VIEWPORT_EDGE_PADDING = 8;
@@ -14,7 +14,7 @@ function clamp(value, min, max) {
 
 // step-by-step spotlight tour: dims the app, cuts a hole around the active
 // stop's target, and shows a tooltip card with back / next / skip controls
-export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete }) {
+export default function WorkspaceGuideOverlay({ stops = [], uiZoom, onClose, onComplete }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [highlightRect, setHighlightRect] = useState(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
@@ -31,7 +31,7 @@ export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete 
   }, [stepIndex]);
 
   // measure the active target and convert it into the overlay's zoomed coordinate space;
-  // getBoundingClientRect reports visual pixels while the overlay root renders under UI_ZOOM,
+  // getBoundingClientRect reports visual pixels while the overlay root renders under uiZoom,
   // so every measured value is divided by the zoom before use
   const updateHighlight = useCallback(() => {
     if (!activeTargetRef?.current) {
@@ -41,8 +41,8 @@ export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete 
 
     const targetElement = activeTargetRef.current;
     const targetRect = targetElement.getBoundingClientRect();
-    const viewportWidth = window.innerWidth / UI_ZOOM;
-    const viewportHeight = window.innerHeight / UI_ZOOM;
+    const viewportWidth = window.innerWidth / uiZoom;
+    const viewportHeight = window.innerHeight / uiZoom;
 
     setViewport((prev) =>
       prev.width === viewportWidth && prev.height === viewportHeight
@@ -56,8 +56,8 @@ export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete 
     const viewportRight = viewportWidth - VIEWPORT_EDGE_PADDING;
 
     // scroll a fully offscreen target into view once per step so the spotlight has something to frame
-    const isOutsideHorizontalViewport = targetRect.right / UI_ZOOM <= viewportLeft || targetRect.left / UI_ZOOM >= viewportRight;
-    const isOutsideVerticalViewport = targetRect.bottom / UI_ZOOM <= viewportTop || targetRect.top / UI_ZOOM >= viewportBottom;
+    const isOutsideHorizontalViewport = targetRect.right / uiZoom <= viewportLeft || targetRect.left / uiZoom >= viewportRight;
+    const isOutsideVerticalViewport = targetRect.bottom / uiZoom <= viewportTop || targetRect.top / uiZoom >= viewportBottom;
     if ((isOutsideHorizontalViewport || isOutsideVerticalViewport) && lastAutoScrollStepRef.current !== stepIndex) {
       lastAutoScrollStepRef.current = stepIndex;
       targetElement.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
@@ -68,10 +68,10 @@ export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete 
     const minHighlightHeight = 32;
     const maxLeft = Math.max(viewportLeft, viewportRight - minHighlightWidth);
     const maxTop = Math.max(viewportTop, viewportBottom - minHighlightHeight);
-    const left = clamp(targetRect.left / UI_ZOOM - SPOTLIGHT_PADDING, viewportLeft, maxLeft);
-    const top = clamp(targetRect.top / UI_ZOOM - SPOTLIGHT_PADDING, viewportTop, maxTop);
-    const right = clamp(targetRect.right / UI_ZOOM + SPOTLIGHT_PADDING, left + minHighlightWidth, viewportRight);
-    const bottom = clamp(targetRect.bottom / UI_ZOOM + SPOTLIGHT_PADDING, top + minHighlightHeight, viewportBottom);
+    const left = clamp(targetRect.left / uiZoom - SPOTLIGHT_PADDING, viewportLeft, maxLeft);
+    const top = clamp(targetRect.top / uiZoom - SPOTLIGHT_PADDING, viewportTop, maxTop);
+    const right = clamp(targetRect.right / uiZoom + SPOTLIGHT_PADDING, left + minHighlightWidth, viewportRight);
+    const bottom = clamp(targetRect.bottom / uiZoom + SPOTLIGHT_PADDING, top + minHighlightHeight, viewportBottom);
 
     const nextRect = {
       left,
@@ -93,7 +93,7 @@ export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete 
       }
       return nextRect;
     });
-  }, [activeTargetRef, stepIndex]);
+  }, [activeTargetRef, stepIndex, uiZoom]);
 
   // re-measure on every resize / scroll, coalesced through one animation frame
   useLayoutEffect(() => {
@@ -170,7 +170,7 @@ export default function WorkspaceGuideOverlay({ stops = [], onClose, onComplete 
   const spotlightShadowSpread = Math.max(viewport.width, viewport.height, 2000);
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 120, zoom: UI_ZOOM, fontFamily: "'Sora', sans-serif" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 120, zoom: uiZoom, fontFamily: "'Sora', sans-serif" }}>
       {/* full dim while the target has not been measured yet */}
       {!highlightRect && <div style={{ position: "absolute", inset: 0, background: OVERLAY_COLOR }} />}
 

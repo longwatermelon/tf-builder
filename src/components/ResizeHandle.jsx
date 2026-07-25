@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { COLORS, UI_ZOOM } from "../styles/theme";
+import { COLORS } from "../styles/theme";
 
 export const HANDLE_WIDTH = 8;
 
@@ -7,7 +7,7 @@ export const HANDLE_WIDTH = 8;
 const KEY_STEP = 16;
 
 // draggable gutter between two panels; reports the horizontal offset from the drag origin
-export default function ResizeHandle({ label, width, minWidth, maxWidth, onDragStart, onDragMove, onNudge }) {
+export default function ResizeHandle({ label, uiZoom, width, minWidth, maxWidth, onDragStart, onDragMove, onNudge }) {
   const [dragging, setDragging] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -42,7 +42,7 @@ export default function ResizeHandle({ label, width, minWidth, maxWidth, onDragS
   // pointer coordinates are screen pixels, but panel widths live inside the app's zoom
   function handlePointerMove(event) {
     if (pointerIdRef.current !== event.pointerId) return;
-    onDragMove((event.clientX - startXRef.current) / UI_ZOOM);
+    onDragMove((event.clientX - startXRef.current) / uiZoom);
   }
 
   function handlePointerUp(event) {

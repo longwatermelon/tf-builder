@@ -20,6 +20,7 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/styles/theme.js` - Shared color tokens, per-module accent colors, and reusable inline button styles.
   - `src/lib/linalg.js` - Dense matrix helpers (matmul, softmax, resize, slice) used by the forward pass.
   - `src/lib/format.js` - Parsing and display helpers for hand-edited floats, including `inf` / `-inf` spellings for attention masks.
+  - `src/lib/uiScale.js` - Responsive viewport-based UI zoom calculation and resize synchronization.
   - `src/lib/model.js` - Module definitions, shape reconciliation across the stack, the forward pass, parameter counting, and puzzle grading.
   - `src/features/puzzles/puzzles.js` - Puzzle catalog, target rules, exhaustive validation inputs, and canonical solution factories.
   - `src/components/MathText.jsx` - Shared KaTeX renderer for math expressions in the UI.

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import App from "./App";
 import WorkspaceGuideOverlay from "./components/WorkspaceGuideOverlay";
-import { btnStyle, COLORS, UI_ZOOM } from "./styles/theme";
+import { useUiZoom } from "./lib/uiScale";
+import { btnStyle, COLORS } from "./styles/theme";
 
 const ONBOARDING_KEY = "tf-builder:onboarding";
 
@@ -53,6 +54,7 @@ function persistOnboardingState(state) {
 export default function RootApp() {
   const [onboardingState, setOnboardingState] = useState(loadOnboardingState);
   const [isGuideActive, setIsGuideActive] = useState(false);
+  const uiZoom = useUiZoom();
 
   const promptCardRef = useRef(null);
 
@@ -154,7 +156,7 @@ export default function RootApp() {
         inert={isPromptOpen || isGuideActive}
         style={{ width: "100%", height: "100%" }}
       >
-        <App guideRefs={guideRefs} />
+        <App guideRefs={guideRefs} uiZoom={uiZoom} />
       </div>
 
       {isPromptOpen && (
@@ -163,7 +165,7 @@ export default function RootApp() {
             position: "fixed",
             inset: 0,
             zIndex: 80,
-            zoom: UI_ZOOM,
+            zoom: uiZoom,
             background: "rgba(0, 0, 0, 0.6)",
             display: "flex",
             alignItems: "center",
@@ -232,7 +234,7 @@ export default function RootApp() {
             right: 14,
             bottom: 14,
             zIndex: 50,
-            zoom: UI_ZOOM,
+            zoom: uiZoom,
             borderColor: `${COLORS.accent}60`,
             color: COLORS.accent,
             background: COLORS.panel,
@@ -245,6 +247,7 @@ export default function RootApp() {
       {isGuideActive && (
         <WorkspaceGuideOverlay
           stops={guideStops}
+          uiZoom={uiZoom}
           onClose={handleCloseGuide}
           onComplete={handleCompleteGuide}
         />
