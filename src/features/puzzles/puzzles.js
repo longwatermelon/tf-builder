@@ -13,6 +13,17 @@ const LOGIT_SCALE = 5;
 
 const NEG = -Infinity;
 
+const TRIANGLE_CODES = [
+  [1, 0],
+  [-0.5, Math.sqrt(3) / 2],
+  [-0.5, -Math.sqrt(3) / 2],
+];
+
+const TRIANGLE_UNEMBED = [
+  [1, -0.5, -0.5],
+  [0, Math.sqrt(3) / 2, -Math.sqrt(3) / 2],
+];
+
 // mask where query i attends only to key targetOf(i); a null target attends nowhere
 function pointMask(len, targetOf) {
   return Array.from({ length: len }, (_, i) => {
@@ -24,11 +35,6 @@ function pointMask(len, targetOf) {
 // standard causal mask: query i attends to every key at or before i
 function causalMask(len) {
   return Array.from({ length: len }, (_, i) => Array.from({ length: len }, (_, j) => (j <= i ? 0 : NEG)));
-}
-
-// sparse entries copying a contiguous run of rows into a contiguous run of columns
-function blockEntries(fromStart, toStart, count, value) {
-  return Array.from({ length: count }, (_, k) => [fromStart + k, toStart + k, value]);
 }
 
 // predict the current token: the embedding alone can already be the logits
@@ -54,65 +60,61 @@ function successorSolution() {
 // output depends only on position parity, so token embeddings are switched off
 function alternateSolution() {
   return {
-    dModel: 2,
+    dModel: 1,
     modules: [
       {
         ...createEmbed({ useE: false, useP: true }),
-        W_P: withEntries(4, 2, [[0, 0, LOGIT_SCALE], [1, 1, LOGIT_SCALE], [2, 0, LOGIT_SCALE], [3, 1, LOGIT_SCALE]]),
+        W_P: [[1], [-1], [1], [-1]],
       },
+      { ...createLinear({ dOut: 2 }), useB: false, W: [[LOGIT_SCALE, -LOGIT_SCALE]] },
     ],
   };
 }
 
-// previous-token head: the mask alone picks position i-1, OV copies the token across
-function prevTokenSolution() {
-  const mask = [
-    [0, NEG, NEG, NEG],
-    [0, NEG, NEG, NEG],
-    [NEG, 0, NEG, NEG],
-    [NEG, NEG, 0, NEG],
-  ];
+// a large scalar copy separates the selected token into one of three affine regions
+function maskedCopySolution(mask) {
   return {
-    dModel: 6,
+    dModel: 1,
     modules: [
-      // dims 0-2 hold the current token, dims 3-5 are left free for the head to write into
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(3, 6, [[0, 0, 1], [1, 1, 1], [2, 2, 1]]) },
+      { ...createEmbed({ useE: true, useP: false }), W_E: [[-1], [0], [1]] },
       {
-        ...createAttn({ dHead: 3, useMask: true }),
-        W_V: withEntries(6, 3, [[0, 0, 1], [1, 1, 1], [2, 2, 1]]),
-        W_O: withEntries(3, 6, [[0, 3, 1], [1, 4, 1], [2, 5, 1]]),
+        ...createAttn({ dHead: 1, useMask: true }),
+        W_V: [[1]],
+        W_O: [[10]],
         mask,
       },
-      {
-        ...createLinear({ dOut: 3 }),
-        useB: false,
-        W: withEntries(6, 3, [[3, 0, LOGIT_SCALE], [4, 1, LOGIT_SCALE], [5, 2, LOGIT_SCALE]]),
-      },
+      { ...createLinear({ dOut: 3 }), W: [[-1, 0, 1]], b: [-5, 0, -5] },
     ],
   };
 }
 
-// copy the token, but every ? row of the embedding points at the a logit instead
+// previous-token head: the mask alone picks position i-1
+function prevTokenSolution() {
+  return maskedCopySolution(pointMask(4, (i) => Math.max(0, i - 1)));
+}
+
+// one scalar sign separates the repaired a class from b
 function repairSolution() {
   return {
-    dModel: 3,
+    dModel: 1,
     modules: [
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(3, 3, [[0, 1, LOGIT_SCALE], [1, 1, LOGIT_SCALE], [2, 2, LOGIT_SCALE]]) },
+      { ...createEmbed({ useE: true, useP: false }), W_E: [[1], [1], [-1]] },
+      { ...createLinear({ dOut: 3 }), useB: false, W: [[0, LOGIT_SCALE, -LOGIT_SCALE]] },
     ],
   };
 }
 
-// echo plus a position-0 marker: W_P outranks W_E only on the first row
+// four scalar locations let three affine logits mark the start and echo later tokens
 function startMarkerSolution() {
   return {
-    dModel: 3,
+    dModel: 1,
     modules: [
       {
         ...createEmbed({ useE: true, useP: true }),
-        W_E: withEntries(3, 3, [[0, 0, LOGIT_SCALE], [1, 1, LOGIT_SCALE], [2, 2, LOGIT_SCALE]]),
-        // twice the token logit, so the marker wins at position 0 whatever the token is
-        W_P: withEntries(4, 3, [[0, 0, 2 * LOGIT_SCALE]]),
+        W_E: [[0], [-1], [1]],
+        W_P: [[0], [4], [4], [4]],
       },
+      { ...createLinear({ dOut: 3 }), W: [[0, 5, 10]], b: [0, -10, -30] },
     ],
   };
 }
@@ -137,140 +139,115 @@ function classifySolution() {
 
 // every query attends to position 0 and the head writes that token back over the stream
 function broadcastSolution() {
-  return {
-    dModel: 3,
-    modules: [
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(3, 3, blockEntries(0, 0, 3, 1)) },
-      {
-        ...createAttn({ dHead: 3, useMask: true }),
-        W_V: withEntries(3, 3, blockEntries(0, 0, 3, 1)),
-        // the copied token lands on the same dims at 5x the scale, so it outvotes the local token
-        W_O: withEntries(3, 3, blockEntries(0, 0, 3, LOGIT_SCALE)),
-        mask: pointMask(4, () => 0),
-      },
-    ],
-  };
+  return maskedCopySolution(pointMask(4, () => 0));
 }
 
-// same overwrite trick as broadcast, but the mask is the anti-diagonal
+// same compact copy as broadcast, but the mask is the anti-diagonal
 function reverseSolution() {
-  return {
-    dModel: 3,
-    modules: [
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(3, 3, blockEntries(0, 0, 3, 1)) },
-      {
-        ...createAttn({ dHead: 3, useMask: true }),
-        W_V: withEntries(3, 3, blockEntries(0, 0, 3, 1)),
-        W_O: withEntries(3, 3, blockEntries(0, 0, 3, LOGIT_SCALE)),
-        mask: pointMask(4, (i) => 3 - i),
-      },
-    ],
-  };
+  return maskedCopySolution(pointMask(4, (i) => 3 - i));
 }
 
-// token sign in dim 0, position sign in dim 1; only a relu can turn their product into a logit gap
+// one relu folds the two agreement cases onto the same positive scalar
 function agreementSolution() {
   return {
-    dModel: 2,
+    dModel: 1,
     modules: [
       {
         ...createEmbed({ useE: true, useP: true }),
-        W_E: withEntries(2, 2, [[0, 0, 1], [1, 0, -1]]),
-        W_P: withEntries(4, 2, [[0, 1, 1], [1, 1, -1], [2, 1, 1], [3, 1, -1]]),
+        W_E: [[0.25], [-0.75]],
+        W_P: [[0.25], [-0.75], [0.25], [-0.75]],
       },
       {
-        ...createMlp({ dHidden: 2 }),
-        // h1 fires only on (+1, +1), h2 only on (-1, -1), so h1 + h2 is the agreement bit
-        W1: [[1, -1], [1, -1]],
-        b1: [-1, -1],
-        // 10 * agreement - 4 swamps the +-2 gap the raw token and position signs leave behind
-        W2: [[LOGIT_SCALE, -LOGIT_SCALE], [LOGIT_SCALE, -LOGIT_SCALE]],
-        b2: [-2, 2],
+        ...createMlp({ dHidden: 1 }),
+        useB2: false,
+        W1: [[-1]],
+        b1: [-1],
+        W2: [[4]],
       },
+      { ...createLinear({ dOut: 2 }), useB: false, W: [[LOGIT_SCALE, -LOGIT_SCALE]] },
     ],
   };
 }
 
-// copy token 0 into its own slot, then an mlp turns the overlap with the current token into one bit
+// subtract the first token, then fold both nonzero difference signs below zero
 function matchFirstSolution() {
   return {
-    dModel: 7,
+    dModel: 1,
     modules: [
-      // dims 0-2 current token, dims 3-5 token 0, dim 6 the match bit
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(5, 7, blockEntries(0, 0, 3, 1)) },
+      { ...createEmbed({ useE: true, useP: false }), W_E: [[-2], [0], [2], [0], [0]] },
       {
-        ...createAttn({ dHead: 3, useMask: true }),
-        W_V: withEntries(7, 3, blockEntries(0, 0, 3, 1)),
-        W_O: withEntries(3, 7, blockEntries(0, 3, 3, 1)),
+        ...createAttn({ dHead: 1, useMask: true }),
+        W_V: [[1]],
+        W_O: [[-1]],
         mask: pointMask(4, () => 0),
       },
       {
-        ...createMlp({ dHidden: 3 }),
-        useB2: false,
-        // hidden unit k fires only when both one-hots carry a 1 in dim k
-        W1: withEntries(7, 3, [...blockEntries(0, 0, 3, 1), ...blockEntries(3, 0, 3, 1)]),
-        b1: [-1, -1, -1],
-        W2: withEntries(3, 7, [[0, 6, 1], [1, 6, 1], [2, 6, 1]]),
+        ...createMlp({ dHidden: 1 }),
+        useB1: false,
+        W1: [[1]],
+        W2: [[-2]],
+        b2: [1],
       },
       {
         ...createLinear({ dOut: 5 }),
-        W: withEntries(7, 5, [[6, 3, 2 * LOGIT_SCALE]]),
-        // n sits at a constant logit that only a firing match bit can clear
-        b: [0, 0, 0, 0, LOGIT_SCALE],
+        useB: false,
+        W: [[0, 0, 0, LOGIT_SCALE, -LOGIT_SCALE]],
       },
     ],
   };
 }
 
-// two composed heads: head 1 tags each position with its predecessor, head 2 matches that tag
+// two compact heads: one stores a predecessor code and the other retrieves its follower
 function inductionSolution() {
   const MATCH_SCALE = 10;
   return {
-    dModel: 9,
+    dModel: 4,
     modules: [
-      // dims 0-2 current token, dims 3-5 previous token, dims 6-8 the retrieved token
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(3, 9, blockEntries(0, 0, 3, 1)) },
+      { ...createEmbed({ useE: true, useP: false }), W_E: TRIANGLE_CODES.map((row) => [...row, 0, 0]) },
       {
-        ...createAttn({ dHead: 3, useMask: true }),
-        W_V: withEntries(9, 3, blockEntries(0, 0, 3, 1)),
-        W_O: withEntries(3, 9, blockEntries(0, 3, 3, 1)),
+        ...createAttn({ dHead: 2, useMask: true }),
+        W_V: withEntries(4, 2, [[0, 0, 1], [1, 1, 1]]),
+        W_O: withEntries(2, 4, [[0, 2, 1], [1, 3, 1]]),
         // position 0 has no predecessor, so its row attends nowhere and leaves the slot at zero
         mask: pointMask(6, (i) => (i === 0 ? null : i - 1)),
       },
       {
-        ...createAttn({ dHead: 3, useMask: true }),
+        ...createAttn({ dHead: 2, useMask: true }),
         // query is the current token, key is each position's predecessor tag
-        W_Q: withEntries(9, 3, blockEntries(0, 0, 3, MATCH_SCALE)),
-        W_K: withEntries(9, 3, blockEntries(3, 0, 3, 1)),
-        W_V: withEntries(9, 3, blockEntries(0, 0, 3, 1)),
-        W_O: withEntries(3, 9, blockEntries(0, 6, 3, 1)),
+        W_Q: withEntries(4, 2, [[0, 0, MATCH_SCALE], [1, 1, MATCH_SCALE]]),
+        W_K: withEntries(4, 2, [[2, 0, 1], [3, 1, 1]]),
+        W_V: withEntries(4, 2, [[0, 0, 1], [1, 1, 1]]),
+        W_O: withEntries(2, 4, [[0, 0, LOGIT_SCALE], [1, 1, LOGIT_SCALE]]),
         mask: causalMask(6),
       },
-      { ...createLinear({ dOut: 3 }), useB: false, W: withEntries(9, 3, blockEntries(6, 0, 3, LOGIT_SCALE)) },
+      {
+        ...createLinear({ dOut: 3 }),
+        useB: false,
+        W: [...TRIANGLE_UNEMBED, [0, 0, 0], [0, 0, 0]],
+      },
     ],
   };
 }
 
-// uniform causal attention averages the a-indicator, and the linear layer thresholds that mean
+// a large prefix-mean term makes one scalar separate strict majorities from every other prefix
 function majoritySolution() {
+  const meanScale = 20;
+  const baseline = -11.5 / (meanScale + 1);
   return {
-    dModel: 2,
+    dModel: 1,
     modules: [
-      // dim 0 is 1 on a, dim 1 receives the prefix mean of dim 0
-      { ...createEmbed({ useE: true, useP: false }), W_E: withEntries(4, 2, [[0, 0, 1]]) },
+      { ...createEmbed({ useE: true, useP: false }), W_E: [[baseline + 1], [baseline], [0], [0]] },
       {
         ...createAttn({ dHead: 1, useMask: true }),
         // W_Q and W_K stay zero, so the causal mask alone makes every score equal
-        W_V: withEntries(2, 1, [[0, 0, 1]]),
-        W_O: withEntries(1, 2, [[0, 1, 1]]),
+        W_V: [[1]],
+        W_O: [[meanScale]],
         mask: causalMask(6),
       },
       {
         ...createLinear({ dOut: 4 }),
-        W: withEntries(2, 4, [[1, 2, 30], [1, 3, -30]]),
-        // the y - n gap is 60m - 35, positive exactly when the mean m clears 7/12; no reachable
-        // mean lands on that threshold, and both biases keep y and n above the unused a/b logits
-        b: [0, 0, 7.5, 42.5],
+        useB: false,
+        W: [[0, 0, LOGIT_SCALE, -LOGIT_SCALE]],
       },
     ],
   };
