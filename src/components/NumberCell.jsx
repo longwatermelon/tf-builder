@@ -3,9 +3,9 @@ import { numberToText, parseNumberText } from "../lib/format";
 import { COLORS, MONO } from "../styles/theme";
 
 const VALUE_SHORTCUTS = {
-  q: "-1",
-  w: "100",
-  e: "-100",
+  q: "-",
+  w: "0",
+  e: "inf",
   s: "inf",
   d: "-inf",
 };
