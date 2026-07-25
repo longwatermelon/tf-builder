@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ModuleInspector from "./components/ModuleInspector";
 import ModuleStack from "./components/ModuleStack";
 import ObjectiveCard from "./components/ObjectiveCard";
 import PuzzleLibrary from "./components/PuzzleLibrary";
+import ResizeHandle, { HANDLE_WIDTH } from "./components/ResizeHandle";
 import TestPanel from "./components/TestPanel";
 import { buildSolution, getPuzzle, PUZZLES } from "./features/puzzles/puzzles";
 import {
@@ -19,6 +20,38 @@ import { COLORS, DIFFICULTY_COLORS, MONO, btnStyle, subtleBtnStyle } from "./sty
 const PROGRESS_KEY = "tf-builder:progress";
 
 const PROGRESS_STATUSES = ["solved", "elegant"];
+
+const ROW_PADDING = 8;
+
+const MIN_PANEL_WIDTH = 150;
+
+// pixel widths of every panel but the last, which absorbs whatever space is left
+const DEFAULT_WIDTHS = [218, 250, 560];
+
+// space the panels themselves can occupy, excluding the row padding and the gutters
+function measureAvailable(row) {
+  if (!row) return 0;
+  return row.clientWidth - ROW_PADDING * 2 - HANDLE_WIDTH * DEFAULT_WIDTHS.length;
+}
+
+// hold a panel between its minimum and the width the last panel can still spare
+function clampPanelWidth(widths, index, width, available) {
+  const used = widths.reduce((sum, w) => sum + w, 0);
+  const slack = Math.max(0, available - used - MIN_PANEL_WIDTH);
+  return Math.min(Math.max(width, MIN_PANEL_WIDTH), widths[index] + slack);
+}
+
+// shrink leading panels from the right until they fit alongside a minimum-width last panel
+function fitWidths(widths, available) {
+  const next = widths.map((w) => Math.max(MIN_PANEL_WIDTH, w));
+  let overflow = next.reduce((sum, w) => sum + w, 0) + MIN_PANEL_WIDTH - available;
+  for (let i = next.length - 1; i >= 0 && overflow > 0; i--) {
+    const shrink = Math.min(overflow, next[i] - MIN_PANEL_WIDTH);
+    next[i] -= shrink;
+    overflow -= shrink;
+  }
+  return next;
+}
 
 // fresh sequence for the scratch tab, defaulting to the first test's tokens
 function defaultScratch(puzzle) {
@@ -47,6 +80,8 @@ function Panel({ children, style }) {
         display: "flex",
         flexDirection: "column",
         minHeight: 0,
+        // keep wide content from stretching a panel past the width the drag handles assign it
+        minWidth: 0,
         ...style,
       }}
     >
@@ -66,6 +101,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(0);
   const [revealedIds, setRevealedIds] = useState(() => new Set());
   const [progress, setProgress] = useState(loadProgress);
+  const [panelWidths, setPanelWidths] = useState(DEFAULT_WIDTHS);
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const rowRef = useRef(null);
+  const dragWidthsRef = useRef(DEFAULT_WIDTHS);
 
   const model = models[activePuzzleId];
   const scratchTokens = scratchByPuzzle[activePuzzleId] ?? defaultScratch(puzzle);
@@ -74,6 +113,8 @@ export default function App() {
   const selectedIndex = model.modules.findIndex((m) => m.id === selectedModuleId);
   const selectedModule = selectedIndex >= 0 ? model.modules[selectedIndex] : model.modules[0];
   const selectedWidth = selectedIndex >= 0 ? inputWidths[selectedIndex] : model.dModel;
+  // how far any one panel can still grow before the last panel hits its minimum
+  const panelSlack = Math.max(0, availableWidth - panelWidths.reduce((sum, w) => sum + w, 0) - MIN_PANEL_WIDTH);
 
   // persist solved / elegant marks across sessions
   useEffect(() => {
@@ -83,6 +124,46 @@ export default function App() {
       // ignore storage failures
     }
   }, [progress]);
+
+  // keep the last panel usable when the window shrinks, and on first layout
+  useEffect(() => {
+    function clampToWindow() {
+      const available = measureAvailable(rowRef.current);
+      if (!available) return;
+      setAvailableWidth(available);
+      setPanelWidths((prev) => {
+        const next = fitWidths(prev, available);
+        return next.every((w, i) => w === prev[i]) ? prev : next;
+      });
+    }
+    clampToWindow();
+    window.addEventListener("resize", clampToWindow);
+    return () => window.removeEventListener("resize", clampToWindow);
+  }, []);
+
+  // snapshot the widths a drag starts from so every move applies to the same baseline
+  function startResize() {
+    dragWidthsRef.current = panelWidths;
+  }
+
+  // dragging gutter `index` resizes only the panel to its left; the last panel takes up the slack.
+  // the snapshot supplies the requested width, but the clamp reads live state so a window resize
+  // mid-drag is not undone by the next pointer move
+  function resizePanel(index, dx) {
+    const requested = dragWidthsRef.current[index] + dx;
+    setPanelWidths((prev) => {
+      const width = clampPanelWidth(prev, index, requested, availableWidth);
+      return prev.map((w, i) => (i === index ? width : w));
+    });
+  }
+
+  // arrow keys step from the latest width, so repeats accumulate even when renders are batched
+  function nudgePanel(index, delta) {
+    setPanelWidths((prev) => {
+      const width = clampPanelWidth(prev, index, prev[index] + delta, availableWidth);
+      return prev.map((w, i) => (i === index ? width : w));
+    });
+  }
 
   // record the best status reached; the reveal lock is attempt-scoped, so an attempt that started
   // from the revealed canonical never counts, but resetting to a blank model earns credit again
@@ -218,12 +299,24 @@ export default function App() {
         </div>
       </header>
 
-      <div style={{ flex: 1, display: "flex", gap: 8, padding: 8, minHeight: 0 }}>
-        <Panel style={{ flex: "0 0 218px" }}>
+      {/* the gutters between panels double as drag handles, so the row itself has no gap;
+          below four minimum-width panels it scrolls rather than clipping the last one */}
+      <div ref={rowRef} style={{ flex: 1, display: "flex", padding: ROW_PADDING, minHeight: 0, overflowX: "auto" }}>
+        <Panel style={{ flex: `0 0 ${panelWidths[0]}px` }}>
           <PuzzleLibrary puzzles={PUZZLES} activeId={activePuzzleId} progress={progress} onSelect={selectPuzzle} />
         </Panel>
 
-        <Panel style={{ flex: "0 0 250px" }}>
+        <ResizeHandle
+          label="Resize puzzles panel"
+          width={panelWidths[0]}
+          minWidth={MIN_PANEL_WIDTH}
+          maxWidth={panelWidths[0] + panelSlack}
+          onDragStart={startResize}
+          onDragMove={(dx) => resizePanel(0, dx)}
+          onNudge={(delta) => nudgePanel(0, delta)}
+        />
+
+        <Panel style={{ flex: `0 0 ${panelWidths[1]}px` }}>
           <ModuleStack
             model={model}
             puzzle={puzzle}
@@ -236,7 +329,17 @@ export default function App() {
           />
         </Panel>
 
-        <Panel style={{ flex: "1 1 520px" }}>
+        <ResizeHandle
+          label="Resize architecture panel"
+          width={panelWidths[1]}
+          minWidth={MIN_PANEL_WIDTH}
+          maxWidth={panelWidths[1] + panelSlack}
+          onDragStart={startResize}
+          onDragMove={(dx) => resizePanel(1, dx)}
+          onNudge={(delta) => nudgePanel(1, delta)}
+        />
+
+        <Panel style={{ flex: `0 0 ${panelWidths[2]}px` }}>
           <div
             style={{
               padding: "10px 12px 6px",
@@ -271,7 +374,17 @@ export default function App() {
           </div>
         </Panel>
 
-        <Panel style={{ flex: "1 1 400px" }}>
+        <ResizeHandle
+          label="Resize weights panel"
+          width={panelWidths[2]}
+          minWidth={MIN_PANEL_WIDTH}
+          maxWidth={panelWidths[2] + panelSlack}
+          onDragStart={startResize}
+          onDragMove={(dx) => resizePanel(2, dx)}
+          onNudge={(delta) => nudgePanel(2, delta)}
+        />
+
+        <Panel style={{ flex: "1 1 0", minWidth: MIN_PANEL_WIDTH }}>
           <div
             style={{
               padding: "10px 12px 8px",

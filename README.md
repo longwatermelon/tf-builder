@@ -31,6 +31,7 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/components/ModuleInspector.jsx` - Weight editors and shape controls for the selected module, headed by that module's equation in LaTeX.
   - `src/components/TestPanel.jsx` - Detail for the selected test case: the editable scratch sequence, input/required/produced alignment, output distribution, and expandable intermediate values.
   - `src/components/PuzzleLibrary.jsx` - Left sidebar puzzle list grouped by difficulty, with solved / elegant marks.
+  - `src/components/ResizeHandle.jsx` - Draggable gutter between two panels; supports pointer drag and arrow-key resizing.
 
 - `nn-builder/` - Git submodule holding the earlier feedforward-network builder, kept only as a design reference.
 - `idea.md` - Original design notes for the game.
