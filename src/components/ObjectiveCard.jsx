@@ -39,6 +39,7 @@ function CaseRow({ index, test, ok, isActive, onSelect }) {
 // the always-visible statement of what the player has to build and how it is judged
 export default function ObjectiveCard({ puzzle, evaluation, scratchTokens, activeTab, onSelectTab }) {
   const passed = evaluation.results.filter((r) => r.ok).length;
+  const inputAlphabet = puzzle.validationVocab ?? puzzle.inputVocab;
 
   return (
     <div style={{ padding: "0 12px 12px" }}>
@@ -59,7 +60,14 @@ export default function ObjectiveCard({ puzzle, evaluation, scratchTokens, activ
             vocabulary{" "}
             <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>{puzzle.vocab.join(" ")}</span>
           </span>
-          {puzzle.inputVocab ? (
+          {puzzle.validationPrefix ? (
+            <span style={{ fontSize: 10, color: COLORS.textMuted }}>
+              inputs{" "}
+              <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>
+                {puzzle.validationPrefix.join(" ")} first; then {inputAlphabet.join(" ")}
+              </span>
+            </span>
+          ) : puzzle.inputVocab ? (
             <span style={{ fontSize: 10, color: COLORS.textMuted }}>
               inputs{" "}
               <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>
@@ -76,9 +84,13 @@ export default function ObjectiveCard({ puzzle, evaluation, scratchTokens, activ
 
       <div style={{ marginTop: 10, fontSize: 10, color: COLORS.textMuted, lineHeight: 1.6 }}>
         <div>
-          <span style={{ color: COLORS.success, fontWeight: 600 }}>Solved</span> when, at every position of every test
-          case, the required token is the highest-probability token and leads the runner-up by at least{" "}
-          <span style={{ fontFamily: MONO, color: COLORS.text }}>{puzzle.epsilon}</span>.
+          <span style={{ color: COLORS.success, fontWeight: 600 }}>Solved</span> when every valid input generated from
+          the rule passes: the required token must lead the runner-up by at least{" "}
+          <span style={{ fontFamily: MONO, color: COLORS.text }}>{puzzle.epsilon}</span>. Rule validation currently{" "}
+          <span style={{ fontFamily: MONO, color: COLORS.text }}>
+            {evaluation.validationPassed}/{evaluation.validationTotal}
+          </span>
+          .
         </div>
         <div>
           <span style={{ color: COLORS.violet, fontWeight: 600 }}>Elegant</span> when solved using at most{" "}
@@ -89,7 +101,7 @@ export default function ObjectiveCard({ puzzle, evaluation, scratchTokens, activ
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 4px" }}>
         <span style={{ fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.textMuted }}>
-          Test cases — all must pass
+          Representative samples
         </span>
         <span
           style={{

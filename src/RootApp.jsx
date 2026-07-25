@@ -82,7 +82,7 @@ export default function RootApp() {
       id: "objective",
       title: "Objective",
       description:
-        "The task statement: goal, vocabulary, and every test case with its required per-position outputs. Click a test case to trace the model's computation on it step by step.",
+        "The task statement, exhaustive rule-validation status, and representative samples. Click a sample to trace the model's computation on it step by step.",
       targetRef: objectiveGuideRef,
     },
     {
@@ -103,7 +103,7 @@ export default function RootApp() {
       id: "header",
       title: "Status bar",
       description:
-        "Track tests passed, your parameter count against the canonical solution, and the solve status. You can also reset the model or reveal the canonical solution from here.",
+        "Track valid inputs passed, your parameter count against the canonical solution, and the solve status. You can also reset the model or reveal the canonical solution from here.",
       targetRef: headerGuideRef,
     },
   ];

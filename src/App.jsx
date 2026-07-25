@@ -17,7 +17,7 @@ import {
 } from "./lib/model";
 import { COLORS, DIFFICULTY_COLORS, MONO, UI_ZOOM, btnStyle, subtleBtnStyle } from "./styles/theme";
 
-const PROGRESS_KEY = "tf-builder:progress";
+const PROGRESS_KEY = "tf-builder:progress:rule-validation-v1";
 
 const PROGRESS_STATUSES = ["solved", "elegant"];
 
@@ -136,6 +136,19 @@ export default function App({ guideRefs = {} }) {
     }
   }, [progress]);
 
+  // record the rendered exhaustive result once, while revealed attempts remain ineligible
+  useEffect(() => {
+    if (revealedIds.has(activePuzzleId) || !evaluation.solved) return undefined;
+    const status = evaluation.elegant ? "elegant" : "solved";
+    const timeoutId = window.setTimeout(() => {
+      setProgress((prev) => {
+        if (prev[activePuzzleId] === "elegant" || prev[activePuzzleId] === status) return prev;
+        return { ...prev, [activePuzzleId]: status };
+      });
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [activePuzzleId, evaluation.elegant, evaluation.solved, revealedIds]);
+
   // keep the last panel usable when the window shrinks, and on first layout
   useEffect(() => {
     function clampToWindow() {
@@ -176,23 +189,9 @@ export default function App({ guideRefs = {} }) {
     });
   }
 
-  // record the best status reached; the reveal lock is attempt-scoped, so an attempt that started
-  // from the revealed canonical never counts, but resetting to a blank model earns credit again
-  function recordProgress(nextModel) {
-    if (revealedIds.has(activePuzzleId)) return;
-    const result = evaluatePuzzle(nextModel, puzzle);
-    if (!result.solved) return;
-    const status = result.elegant ? "elegant" : "solved";
-    setProgress((prev) => {
-      if (prev[activePuzzleId] === "elegant" || prev[activePuzzleId] === status) return prev;
-      return { ...prev, [activePuzzleId]: status };
-    });
-  }
-
   function updateModel(nextModel) {
     const reconciled = reconcileShapes(nextModel, puzzle);
     setModels((prev) => ({ ...prev, [activePuzzleId]: reconciled }));
-    recordProgress(reconciled);
   }
 
   function selectPuzzle(id) {
@@ -258,7 +257,6 @@ export default function App({ guideRefs = {} }) {
   const isRevealed = revealedIds.has(activePuzzleId);
   const statusColor = evaluation.elegant ? COLORS.violet : evaluation.solved ? COLORS.success : COLORS.textMuted;
   const statusText = evaluation.elegant ? "Elegant" : evaluation.solved ? "Solved" : "Unsolved";
-  const passedCount = evaluation.results.filter((r) => r.ok).length;
 
   return (
     // the zoom scales the whole app one step up; every px below is laid out inside that scale
@@ -299,7 +297,7 @@ export default function App({ guideRefs = {} }) {
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
           <span style={{ fontFamily: MONO, fontSize: 11, color: COLORS.textMuted }}>
-            {passedCount}/{evaluation.results.length} tests
+            {evaluation.validationPassed}/{evaluation.validationTotal} valid inputs
           </span>
           <span style={{ fontFamily: MONO, fontSize: 11, color: COLORS.textMuted }}>
             {evaluation.params}p / canonical {puzzle.canonicalParams}p

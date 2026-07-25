@@ -239,18 +239,36 @@ export function gradeSequence(probs, targetIds, epsilon) {
   });
 }
 
-// run every test sequence and roll up solved / elegant status
-export function evaluatePuzzle(model, puzzle) {
-  const results = puzzle.tests.map((test) => {
+// grade one set of cases, retaining detailed passes only when the UI needs them
+function evaluateTestSet(model, puzzle, tests, includeDetails) {
+  const results = [];
+  let passed = 0;
+  for (const test of tests) {
     const tokenIds = test.tokens.map((t) => puzzle.vocab.indexOf(t));
     const targetIds = test.targets.map((t) => (t === null ? null : puzzle.vocab.indexOf(t)));
     const pass = forward(model, puzzle, tokenIds);
     const grades = gradeSequence(pass.probs, targetIds, puzzle.epsilon);
-    return { test, tokenIds, targetIds, pass, grades, ok: !!grades && grades.every((g) => g.ok) };
-  });
-  const solved = results.length > 0 && results.every((r) => r.ok);
+    const ok = !!grades && grades.every((g) => g.ok);
+    if (ok) passed += 1;
+    if (includeDetails) results.push({ test, tokenIds, targetIds, pass, grades, ok });
+  }
+  return { results, passed, allPassed: tests.length > 0 && passed === tests.length };
+}
+
+// grade visible samples plus the puzzle's exhaustive rule-derived validation domain
+export function evaluatePuzzle(model, puzzle) {
+  const samples = evaluateTestSet(model, puzzle, puzzle.tests, true);
+  const validationTests = puzzle.validationTests ?? puzzle.tests;
+  const validation = evaluateTestSet(model, puzzle, validationTests, false);
   const params = countParams(model, puzzle);
-  return { results, solved, params, elegant: solved && params <= puzzle.canonicalParams };
+  return {
+    results: samples.results,
+    solved: validation.allPassed,
+    validationPassed: validation.passed,
+    validationTotal: validationTests.length,
+    params,
+    elegant: validation.allPassed && params <= puzzle.canonicalParams,
+  };
 }
 
 // helper used by canonical solutions to fill a matrix from a sparse entry list

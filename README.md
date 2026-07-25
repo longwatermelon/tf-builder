@@ -4,10 +4,10 @@ This project is a website for hand-crafting small transformers. The player picks
 
 ## Summary
 
-- A **puzzle** is one input/output specification: a vocabulary, a fixed and fully visible set of test sequences, and a per-position target token for each. Puzzles are graded `tutorial` / `easy` / `medium` / `hard`. A `null` target marks a position the rule does not determine, which is displayed as `·` and left ungraded. Optionally a puzzle also declares `inputVocab`, the subset of the vocabulary that can appear as input when the rest of it is output-only labels, and `fixedLen`, which pins every sequence to `maxLen`.
+- A **puzzle** is one input/output rule with a vocabulary, a small visible set of representative samples, and rule-derived validation over every valid input up to `maxLen`. Puzzles are graded `tutorial` / `easy` / `medium` / `hard`. A `null` target marks a position the rule does not determine, which is displayed as `·` and left ungraded. Optionally a puzzle also declares `inputVocab`, the subset of the vocabulary that can appear as input when the rest of it is output-only labels, and `fixedLen`, which pins every sequence to `maxLen`.
 - The **module stack** is the player's architecture. Every puzzle starts with a single **Embedding** module, sized so the residual stream is already the token axis; the player inserts and deletes **Attention Head**, **MLP**, and **Linear** modules themselves, at any point in the stack. Attention and MLP add into the residual stream; Linear is the only module that changes the stream width, so it doubles as the unembedding.
 - There is no LayerNorm, and attention scores are raw `QKᵀ` with no `1/√d` scaling — both would only make hand-crafting harder without teaching anything.
-- A puzzle is **solved** when, for every test sequence and every position, the required token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`. The final softmax is over the vocabulary at each position — it is a per-position output distribution, not a next-token prediction.
+- A puzzle is **solved** when, for every valid rule-generated input and every graded position, the required token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`. The final softmax is over the vocabulary at each position — it is a per-position output distribution, not a next-token prediction.
 - A solve is **elegant** when the total allocated parameter count is at most the canonical solution's. Optional blocks (`W_E`, `W_P`, the attention mask `M`, and every MLP or Linear bias) can be switched off to drop their parameters from the count.
 - Each puzzle ships a **canonical solution** the player can reveal; the elegance bar is derived from it rather than hand-written. Revealing locks progress for the current attempt only — resetting back to a blank model (or reloading) lets a from-scratch rebuild earn the mark again.
 
@@ -21,15 +21,15 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/lib/linalg.js` - Dense matrix helpers (matmul, softmax, resize, slice) used by the forward pass.
   - `src/lib/format.js` - Parsing and display helpers for hand-edited floats, including `inf` / `-inf` spellings for attention masks.
   - `src/lib/model.js` - Module definitions, shape reconciliation across the stack, the forward pass, parameter counting, and puzzle grading.
-  - `src/features/puzzles/puzzles.js` - Puzzle catalog and canonical solution factories.
+  - `src/features/puzzles/puzzles.js` - Puzzle catalog, target rules, exhaustive validation inputs, and canonical solution factories.
   - `src/components/MathText.jsx` - Shared KaTeX renderer for math expressions in the UI.
   - `src/components/NumberCell.jsx` - One hand-editable float: draft-preserving input with select-on-focus and arrow-key navigation hooks.
   - `src/components/MatrixEditor.jsx` - Labeled, keyboard-navigable grid of editable weights, with quick fills (zero / identity / causal mask).
   - `src/components/ValueGrid.jsx` - Read-only labeled grid for computed values (residual stream, attention patterns, probabilities).
   - `src/components/ModuleStack.jsx` - Architecture column: the ordered module cards, the stream width each one emits, and the inline insert / delete / reorder controls.
-  - `src/components/ObjectiveCard.jsx` - Always-visible statement of the task: goal, formula, vocabulary, every test case as input → required output with pass state, and the solved / elegant rules.
+  - `src/components/ObjectiveCard.jsx` - Always-visible statement of the task: goal, formula, vocabulary, exhaustive rule-validation status, representative samples, and the solved / elegant rules.
   - `src/components/ModuleInspector.jsx` - Weight editors and shape controls for the selected module, headed by that module's equation in LaTeX.
-  - `src/components/TestPanel.jsx` - Detail for the selected test case: the editable scratch sequence, input/required/produced alignment, output distribution, and expandable intermediate values.
+  - `src/components/TestPanel.jsx` - Detail for the selected sample: the editable scratch sequence, input/required/produced alignment, output distribution, and expandable intermediate values.
   - `src/components/PuzzleLibrary.jsx` - Left sidebar puzzle list grouped by difficulty, with solved / elegant marks.
   - `src/components/ResizeHandle.jsx` - Draggable gutter between two panels; supports pointer drag and arrow-key resizing.
 

@@ -276,6 +276,104 @@ function majoritySolution() {
   };
 }
 
+// turn compact input strings into graded cases using the puzzle's actual rule
+function makeTests(inputs, targetFactory) {
+  return inputs.map((input) => {
+    const tokens = Array.from(input);
+    return { tokens, targets: targetFactory(tokens) };
+  });
+}
+
+// enumerate every valid non-empty input up to maxLen, optionally after a fixed prefix
+function enumerateInputs(alphabet, maxLen, { fixedLen = false, prefix = [] } = {}) {
+  const inputs = [];
+  let frontier = [[...prefix]];
+  for (let length = prefix.length; length <= maxLen; length++) {
+    if (length > 0 && (!fixedLen || length === maxLen)) inputs.push(...frontier.map((tokens) => tokens.join("")));
+    if (length === maxLen) break;
+    frontier = frontier.flatMap((tokens) => alphabet.map((token) => [...tokens, token]));
+  }
+  return inputs;
+}
+
+// echo keeps every token unchanged
+function echoTargets(tokens) {
+  return [...tokens];
+}
+
+// successor advances each token around the three-token cycle
+function successorTargets(tokens) {
+  const next = { a: "b", b: "c", c: "a" };
+  return tokens.map((token) => next[token]);
+}
+
+// repair treats each question mark as a corrupted a
+function repairTargets(tokens) {
+  return tokens.map((token) => (token === "?" ? "a" : token));
+}
+
+// alternate ignores token identity and follows position parity
+function alternateTargets(tokens) {
+  return tokens.map((_, i) => (i % 2 === 0 ? "a" : "b"));
+}
+
+// start marker overwrites position zero and echoes every later token
+function startMarkerTargets(tokens) {
+  return tokens.map((token, i) => (i === 0 ? "▶" : token));
+}
+
+// classify maps vowels and consonants to their output-only labels
+function classifyTargets(tokens) {
+  const vowels = new Set(["a", "e", "i"]);
+  return tokens.map((token) => (vowels.has(token) ? "V" : "C"));
+}
+
+// previous token emits the fixed start marker followed by each predecessor
+function previousTargets(tokens) {
+  return tokens.map((_, i) => (i === 0 ? "⋄" : tokens[i - 1]));
+}
+
+// broadcast copies the first token to every position
+function broadcastTargets(tokens) {
+  return tokens.map(() => tokens[0]);
+}
+
+// reverse mirrors the complete fixed-length sequence
+function reverseTargets(tokens) {
+  return [...tokens].reverse();
+}
+
+// agreement checks whether token identity agrees with position parity
+function agreementTargets(tokens) {
+  return tokens.map((token, i) => ((token === "a") === (i % 2 === 0) ? "a" : "b"));
+}
+
+// match first compares every token with the first token in its sequence
+function matchFirstTargets(tokens) {
+  return tokens.map((token) => (token === tokens[0] ? "y" : "n"));
+}
+
+// majority labels each prefix by whether a is strictly ahead
+function majorityTargets(tokens) {
+  let countA = 0;
+  return tokens.map((token, i) => {
+    if (token === "a") countA += 1;
+    return countA > (i + 1) / 2 ? "y" : "n";
+  });
+}
+
+// induction returns the shared follower of prior matches and skips ambiguous positions
+function inductionTargets(tokens) {
+  return tokens.map((token, i) => {
+    const followers = [];
+    for (let j = 0; j < i; j++) {
+      if (tokens[j] === token) followers.push(tokens[j + 1]);
+    }
+    if (followers.length === 0 || followers.some((follower) => follower !== followers[0])) return null;
+    return followers[0];
+  });
+}
+
 const PUZZLE_DEFS = [
   {
     id: "echo",
@@ -286,10 +384,8 @@ const PUZZLE_DEFS = [
     vocab: ["a", "b", "c"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "c", "a"], targets: ["a", "b", "c", "a"] },
-      { tokens: ["c", "a", "b", "b"], targets: ["c", "a", "b", "b"] },
-    ],
+    tests: makeTests(["abca", "cabb"], echoTargets),
+    targetFactory: echoTargets,
     solutionFactory: echoSolution,
   },
   {
@@ -301,10 +397,8 @@ const PUZZLE_DEFS = [
     vocab: ["a", "b", "c"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "c", "a"], targets: ["b", "c", "a", "b"] },
-      { tokens: ["c", "c", "a", "b"], targets: ["a", "a", "b", "c"] },
-    ],
+    tests: makeTests(["abca", "ccab"], successorTargets),
+    targetFactory: successorTargets,
     solutionFactory: successorSolution,
   },
   {
@@ -316,10 +410,8 @@ const PUZZLE_DEFS = [
     vocab: ["?", "a", "b"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["?", "a", "b", "?"], targets: ["a", "a", "b", "a"] },
-      { tokens: ["b", "?", "b", "a"], targets: ["b", "a", "b", "a"] },
-    ],
+    tests: makeTests(["?ab?", "b?ba"], repairTargets),
+    targetFactory: repairTargets,
     solutionFactory: repairSolution,
   },
   {
@@ -331,10 +423,8 @@ const PUZZLE_DEFS = [
     vocab: ["a", "b"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "a", "b", "b"], targets: ["a", "b", "a", "b"] },
-      { tokens: ["b", "a", "a", "b"], targets: ["a", "b", "a", "b"] },
-    ],
+    tests: makeTests(["aabb", "baab"], alternateTargets),
+    targetFactory: alternateTargets,
     solutionFactory: alternateSolution,
   },
   {
@@ -347,11 +437,11 @@ const PUZZLE_DEFS = [
     inputVocab: ["a", "b"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "a", "b"], targets: ["▶", "b", "a", "b"] },
-      { tokens: ["b", "b", "a", "a"], targets: ["▶", "b", "a", "a"] },
-      { tokens: ["a", "a", "b", "b"], targets: ["▶", "a", "b", "b"] },
-    ],
+    tests: makeTests(
+      ["abab", "bbaa", "aabb"],
+      startMarkerTargets,
+    ),
+    targetFactory: startMarkerTargets,
     solutionFactory: startMarkerSolution,
   },
   {
@@ -364,11 +454,8 @@ const PUZZLE_DEFS = [
     inputVocab: ["a", "e", "i", "b", "c"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "e", "c"], targets: ["V", "C", "V", "C"] },
-      { tokens: ["i", "i", "c", "a"], targets: ["V", "V", "C", "V"] },
-      { tokens: ["b", "c", "b", "e"], targets: ["C", "C", "C", "V"] },
-    ],
+    tests: makeTests(["abec", "iica", "bcbe"], classifyTargets),
+    targetFactory: classifyTargets,
     solutionFactory: classifySolution,
   },
   {
@@ -380,11 +467,10 @@ const PUZZLE_DEFS = [
     vocab: ["⋄", "a", "b"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["⋄", "a", "b", "a"], targets: ["⋄", "⋄", "a", "b"] },
-      { tokens: ["⋄", "b", "b", "a"], targets: ["⋄", "⋄", "b", "b"] },
-      { tokens: ["⋄", "a", "a", "b"], targets: ["⋄", "⋄", "a", "a"] },
-    ],
+    tests: makeTests(["⋄aba", "⋄bba", "⋄aab"], previousTargets),
+    targetFactory: previousTargets,
+    validationVocab: ["a", "b"],
+    validationPrefix: ["⋄"],
     solutionFactory: prevTokenSolution,
   },
   {
@@ -396,11 +482,8 @@ const PUZZLE_DEFS = [
     vocab: ["a", "b", "c"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "c", "b"], targets: ["a", "a", "a", "a"] },
-      { tokens: ["c", "a", "a", "b"], targets: ["c", "c", "c", "c"] },
-      { tokens: ["b", "c", "c", "a"], targets: ["b", "b", "b", "b"] },
-    ],
+    tests: makeTests(["abcb", "caab", "bcca"], broadcastTargets),
+    targetFactory: broadcastTargets,
     solutionFactory: broadcastSolution,
   },
   {
@@ -414,11 +497,8 @@ const PUZZLE_DEFS = [
     // the anti-diagonal mask is tied to one length, so the scratch sequence cannot be resized
     fixedLen: true,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "c", "a"], targets: ["a", "c", "b", "a"] },
-      { tokens: ["c", "a", "b", "b"], targets: ["b", "b", "a", "c"] },
-      { tokens: ["b", "b", "c", "a"], targets: ["a", "c", "b", "b"] },
-    ],
+    tests: makeTests(["abca", "cabb", "bbca"], reverseTargets),
+    targetFactory: reverseTargets,
     solutionFactory: reverseSolution,
   },
   {
@@ -430,11 +510,8 @@ const PUZZLE_DEFS = [
     vocab: ["a", "b"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "a", "b", "b"], targets: ["a", "b", "b", "a"] },
-      { tokens: ["b", "a", "a", "b"], targets: ["b", "b", "a", "a"] },
-      { tokens: ["a", "b", "a", "b"], targets: ["a", "a", "a", "a"] },
-    ],
+    tests: makeTests(["aabb", "baab", "abab"], agreementTargets),
+    targetFactory: agreementTargets,
     solutionFactory: agreementSolution,
   },
   {
@@ -447,11 +524,8 @@ const PUZZLE_DEFS = [
     inputVocab: ["a", "b", "c"],
     maxLen: 4,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "a", "c"], targets: ["y", "n", "y", "n"] },
-      { tokens: ["b", "b", "c", "b"], targets: ["y", "y", "n", "y"] },
-      { tokens: ["c", "a", "a", "c"], targets: ["y", "n", "n", "y"] },
-    ],
+    tests: makeTests(["abac", "bbcb", "caac"], matchFirstTargets),
+    targetFactory: matchFirstTargets,
     solutionFactory: matchFirstSolution,
   },
   {
@@ -464,11 +538,8 @@ const PUZZLE_DEFS = [
     inputVocab: ["a", "b"],
     maxLen: 6,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "a", "b", "b", "b", "b"], targets: ["y", "y", "y", "n", "n", "n"] },
-      { tokens: ["b", "a", "a", "a", "b", "a"], targets: ["n", "n", "y", "y", "y", "y"] },
-      { tokens: ["a", "b", "a", "b", "b", "a"], targets: ["y", "n", "y", "n", "n", "n"] },
-    ],
+    tests: makeTests(["aabbbb", "baaaba", "ababba"], majorityTargets),
+    targetFactory: majorityTargets,
     solutionFactory: majoritySolution,
   },
   {
@@ -481,15 +552,8 @@ const PUZZLE_DEFS = [
     vocab: ["a", "b", "c"],
     maxLen: 6,
     epsilon: 0.05,
-    tests: [
-      { tokens: ["a", "b", "c", "a", "b", "c"], targets: [null, null, null, "b", "c", "a"] },
-      { tokens: ["c", "a", "b", "c", "a", "b"], targets: [null, null, null, "a", "b", "c"] },
-      { tokens: ["a", "b", "b", "a", "c", "c"], targets: [null, null, "b", "b", null, "c"] },
-      // two earlier copies of a, both followed by b, so the retrieval is still unambiguous
-      { tokens: ["a", "b", "a", "b", "c", "a"], targets: [null, null, "b", "a", null, "b"] },
-      // the two earlier copies of a disagree here, so the last position is left ungraded
-      { tokens: ["a", "b", "a", "c", "b", "a"], targets: [null, null, "b", null, "a", null] },
-    ],
+    tests: makeTests(["abcabc", "cabcab", "abbacc", "ababca", "abacba"], inductionTargets),
+    targetFactory: inductionTargets,
     solutionFactory: inductionSolution,
   },
 ];
@@ -499,11 +563,19 @@ export function buildSolution(puzzle) {
   return reconcileShapes(puzzle.solutionFactory(), puzzle);
 }
 
-// the elegance bar is derived from the canonical solution, never hand-written
-export const PUZZLES = PUZZLE_DEFS.map((puzzle) => ({
-  ...puzzle,
-  canonicalParams: countParams(reconcileShapes(puzzle.solutionFactory(), puzzle), puzzle),
-}));
+// derive exhaustive rule-validation cases and the elegance bar from each puzzle definition
+export const PUZZLES = PUZZLE_DEFS.map((puzzle) => {
+  const validationInputs = enumerateInputs(
+    puzzle.validationVocab ?? puzzle.inputVocab ?? puzzle.vocab,
+    puzzle.maxLen,
+    { fixedLen: puzzle.fixedLen, prefix: puzzle.validationPrefix },
+  );
+  return {
+    ...puzzle,
+    validationTests: makeTests(validationInputs, puzzle.targetFactory),
+    canonicalParams: countParams(reconcileShapes(puzzle.solutionFactory(), puzzle), puzzle),
+  };
+});
 
 export function getPuzzle(id) {
   return PUZZLES.find((puzzle) => puzzle.id === id) ?? PUZZLES[0];

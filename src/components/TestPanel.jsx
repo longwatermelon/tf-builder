@@ -77,7 +77,8 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
   const isScratch = activeTab === "scratch";
   const vocab = puzzle.vocab;
   // some puzzles keep label-only tokens in the vocabulary, so scratch cycles the input alphabet
-  const inputVocab = puzzle.inputVocab ?? vocab;
+  const inputVocab = puzzle.validationVocab ?? puzzle.inputVocab ?? vocab;
+  const fixedPrefix = puzzle.validationPrefix ?? [];
 
   const tokens = isScratch ? scratchTokens : evaluation.results[activeTab]?.test.tokens ?? [];
   const targets = isScratch ? null : evaluation.results[activeTab]?.test.targets ?? null;
@@ -93,7 +94,7 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
   return (
     <div style={{ padding: "0 12px 12px", borderTop: `1px solid ${COLORS.panelBorder}`, paddingTop: 12 }}>
       <div style={{ fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.textMuted, marginBottom: 8 }}>
-        {isScratch ? "Scratch sequence" : `Test case ${activeTab + 1}`}
+        {isScratch ? "Scratch sequence" : `Sample ${activeTab + 1}`}
       </div>
 
       {isScratch ? (
@@ -125,11 +126,13 @@ export default function TestPanel({ puzzle, model, evaluation, scratchTokens, on
           {scratchTokens.map((token, i) => (
             <button
               key={`s-${i}`}
+              disabled={i < fixedPrefix.length}
               type="button"
               onClick={() => {
                 const next = [...scratchTokens];
-                const at = inputVocab.indexOf(token);
-                next[i] = inputVocab[(at + 1) % inputVocab.length];
+                const choices = i < fixedPrefix.length ? [fixedPrefix[i]] : inputVocab;
+                const at = choices.indexOf(token);
+                next[i] = choices[(at + 1) % choices.length];
                 onChangeScratch(next);
               }}
               style={{ ...subtleBtnStyle, fontFamily: MONO, color: COLORS.textBright, minWidth: 34 }}
