@@ -4,7 +4,7 @@ This project is a website for hand-crafting small transformers. The player picks
 
 ## Summary
 
-- A **puzzle** is one input/output specification: a vocabulary, a fixed and fully visible set of test sequences, and a per-position target token for each. Puzzles are graded `tutorial` / `easy` / `medium` / `hard`.
+- A **puzzle** is one input/output specification: a vocabulary, a fixed and fully visible set of test sequences, and a per-position target token for each. Puzzles are graded `tutorial` / `easy` / `medium` / `hard`. A `null` target marks a position the rule does not determine, which is displayed as `·` and left ungraded. Optionally a puzzle also declares `inputVocab`, the subset of the vocabulary that can appear as input when the rest of it is output-only labels, and `fixedLen`, which pins every sequence to `maxLen`.
 - The **module stack** is the player's architecture. Every puzzle starts with a single **Embedding** module, sized so the residual stream is already the token axis; the player inserts and deletes **Attention Head**, **MLP**, and **Linear** modules themselves, at any point in the stack. Attention and MLP add into the residual stream; Linear is the only module that changes the stream width, so it doubles as the unembedding.
 - There is no LayerNorm, and attention scores are raw `QKᵀ` with no `1/√d` scaling — both would only make hand-crafting harder without teaching anything.
 - A puzzle is **solved** when, for every test sequence and every position, the required token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`. The final softmax is over the vocabulary at each position — it is a per-position output distribution, not a next-token prediction.

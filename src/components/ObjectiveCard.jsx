@@ -54,8 +54,17 @@ export default function ObjectiveCard({ puzzle, evaluation, activeTab, onSelectT
             vocabulary{" "}
             <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>{puzzle.vocab.join(" ")}</span>
           </span>
+          {puzzle.inputVocab ? (
+            <span style={{ fontSize: 10, color: COLORS.textMuted }}>
+              inputs{" "}
+              <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>
+                {puzzle.inputVocab.join(" ")}
+              </span>
+            </span>
+          ) : null}
           <span style={{ fontSize: 10, color: COLORS.textMuted }}>
-            up to <span style={{ fontFamily: MONO, color: COLORS.textBright }}>{puzzle.maxLen}</span> positions
+            {puzzle.fixedLen ? "exactly" : "up to"}{" "}
+            <span style={{ fontFamily: MONO, color: COLORS.textBright }}>{puzzle.maxLen}</span> positions
           </span>
         </div>
       </div>
