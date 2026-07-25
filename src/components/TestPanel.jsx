@@ -9,8 +9,22 @@ import {
 } from "../lib/axisLabels";
 import { formatProbability } from "../lib/format";
 import { forward } from "../lib/model";
-import { COLORS, MODULE_COLORS, MONO, probabilityFill, smallBtnStyle, subtleBtnStyle } from "../styles/theme";
+import { COLORS, heatmapFill, MODULE_COLORS, MONO, probabilityFill, smallBtnStyle, subtleBtnStyle } from "../styles/theme";
 import ValueGrid from "./ValueGrid";
+
+// per-matrix diverging heatmap styling: red negative, blue positive, scaled to the matrix's own range
+function heatCellStyle(matrix) {
+  let maxAbs = 0;
+  for (const row of matrix) {
+    for (const v of row) if (Number.isFinite(v)) maxAbs = Math.max(maxAbs, Math.abs(v));
+  }
+  return (i, j, value) => {
+    const fill = heatmapFill(value, maxAbs);
+    if (!fill) return null;
+    const strong = !Number.isFinite(value) || (maxAbs > 0 && Math.abs(value) / maxAbs >= 0.5);
+    return { background: fill, color: strong ? COLORS.textBright : COLORS.text };
+  };
+}
 
 // "0:a" style position labels so rows are unambiguous, carrying any name given to the position
 function positionLabels(tokens, labels) {
@@ -228,34 +242,44 @@ export default function TestPanel({
                     </div>
                     {stage.extras.map((extra) => {
                       const isPattern = extra.kind === "pattern";
-                      const hiddenWidth = extra.matrix[0]?.length ?? 0;
+                      const width = extra.matrix[0]?.length ?? 0;
+                      // column labels follow the axis the intermediate lives on
+                      let colLabels;
+                      let colAxis;
+                      if (isPattern) {
+                        colLabels = posLabels;
+                        colAxis = "key";
+                      } else if (extra.kind === "stream") {
+                        colLabels = resolveLabels(labels, streamKey, streamDefaults(streamKey, width, puzzle));
+                        colAxis = "residual dim";
+                      } else {
+                        colLabels = resolveLabels(labels, moduleAxis(stage.moduleId, "h"), defaultLabels(width, "h"));
+                        colAxis = extra.kind === "head" ? "head dim" : "hidden unit";
+                      }
                       return (
                         <div key={extra.key} style={{ marginBottom: 8 }}>
                           <div style={{ fontSize: 9, color: COLORS.textMuted, marginBottom: 3 }}>{extra.label}</div>
                           <ValueGrid
                             matrix={extra.matrix}
                             rowLabels={posLabels}
-                            colLabels={
-                              isPattern
-                                ? posLabels
-                                : resolveLabels(
-                                    labels,
-                                    moduleAxis(stage.moduleId, "h"),
-                                    defaultLabels(hiddenWidth, "h"),
-                                  )
-                            }
+                            colLabels={colLabels}
                             rowAxis={isPattern ? "query" : "position"}
-                            colAxis={isPattern ? "key" : "hidden unit"}
+                            colAxis={colAxis}
+                            cellStyleAt={heatCellStyle(extra.matrix)}
                           />
                         </div>
                       );
                     })}
+                    <div style={{ fontSize: 9, color: COLORS.textMuted, marginBottom: 3 }}>
+                      {isLogits ? "Stream X (read as logits)" : "Stream X"}
+                    </div>
                     <ValueGrid
                       matrix={stage.matrix}
                       rowLabels={posLabels}
                       colLabels={resolveLabels(labels, streamKey, streamNames)}
                       rowAxis="position"
                       colAxis={isLogits ? "token" : "residual dim"}
+                      cellStyleAt={heatCellStyle(stage.matrix)}
                     />
                   </div>
                 );

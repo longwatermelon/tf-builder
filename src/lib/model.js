@@ -152,8 +152,9 @@ function runAttention(module, x, T) {
     scores = scores.map((row, i) => row.map((v, j) => v + mask[i][j]));
   }
   const pattern = softmaxRows(scores);
-  const out = matmul(matmul(pattern, V), module.W_O);
-  return { Q, K, V, scores, pattern, out };
+  const av = matmul(pattern, V);
+  const out = matmul(av, module.W_O);
+  return { Q, K, V, scores, pattern, av, out };
 }
 
 // forward pass over one token sequence; returns a snapshot after every module
@@ -169,29 +170,61 @@ export function forward(model, puzzle, tokenIds) {
     const extras = [];
 
     if (module.type === "embed") {
-      x = zeros(T, model.dModel);
+      const tokEmb = zeros(T, model.dModel);
+      const posEmb = zeros(T, model.dModel);
       if (module.useE) {
         for (let i = 0; i < T; i++) {
           const row = module.W_E[tokenIds[i]] ?? zeroVec(model.dModel);
-          for (let j = 0; j < model.dModel; j++) x[i][j] += row[j];
+          for (let j = 0; j < model.dModel; j++) tokEmb[i][j] = row[j];
         }
       }
       if (module.useP) {
         for (let i = 0; i < T; i++) {
           const row = module.W_P[i] ?? zeroVec(model.dModel);
-          for (let j = 0; j < model.dModel; j++) x[i][j] += row[j];
+          for (let j = 0; j < model.dModel; j++) posEmb[i][j] = row[j];
         }
       }
+      // separate contributions only mean something when both sources are on
+      if (module.useE && module.useP) {
+        extras.push({ key: "tok", label: "Token embedding W_E[t]", matrix: tokEmb, kind: "stream" });
+        extras.push({ key: "pos", label: "Position embedding W_P[p]", matrix: posEmb, kind: "stream" });
+      }
+      x = addMatrix(tokEmb, posEmb);
     } else if (module.type === "attn") {
       const result = runAttention(module, x, T);
-      extras.push({ key: "pattern", label: "Attention pattern A", matrix: result.pattern, kind: "pattern" });
+      extras.push({ key: "q", label: "Query Q = XW_Q", matrix: result.Q, kind: "head" });
+      extras.push({ key: "k", label: "Key K = XW_K", matrix: result.K, kind: "head" });
+      extras.push({ key: "v", label: "Value V = XW_V", matrix: result.V, kind: "head" });
+      extras.push({
+        key: "scores",
+        label: `Scores QKᵀ${module.useMask ? " + M" : ""}`,
+        matrix: result.scores,
+        kind: "pattern",
+      });
+      extras.push({ key: "pattern", label: "Attention pattern A = softmax(scores)", matrix: result.pattern, kind: "pattern" });
+      extras.push({ key: "av", label: "Weighted values AV", matrix: result.av, kind: "head" });
+      extras.push({ key: "out", label: "Head output (AV)W_O", matrix: result.out, kind: "stream" });
       x = addMatrix(x, result.out);
     } else if (module.type === "mlp") {
       const hiddenInput = matmul(x, module.W1);
-      const hidden = reluMatrix(module.useB1 ? addRowVec(hiddenInput, module.b1) : hiddenInput);
-      extras.push({ key: "hidden", label: "Hidden (post-ReLU)", matrix: hidden, kind: "stream" });
+      const preact = module.useB1 ? addRowVec(hiddenInput, module.b1) : hiddenInput;
+      extras.push({
+        key: "preact",
+        label: `Pre-activation XW₁${module.useB1 ? " + b₁" : ""}`,
+        matrix: preact,
+        kind: "hidden",
+      });
+      const hidden = reluMatrix(preact);
+      extras.push({ key: "hidden", label: "Hidden H = ReLU(pre-activation)", matrix: hidden, kind: "hidden" });
       const mlpOutput = matmul(hidden, module.W2);
-      x = addMatrix(x, module.useB2 ? addRowVec(mlpOutput, module.b2) : mlpOutput);
+      const mlpOut = module.useB2 ? addRowVec(mlpOutput, module.b2) : mlpOutput;
+      extras.push({
+        key: "out",
+        label: `MLP output HW₂${module.useB2 ? " + b₂" : ""}`,
+        matrix: mlpOut,
+        kind: "stream",
+      });
+      x = addMatrix(x, mlpOut);
     } else {
       const linearOutput = matmul(x, module.W);
       x = module.useB ? addRowVec(linearOutput, module.b) : linearOutput;

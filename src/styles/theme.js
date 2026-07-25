@@ -33,6 +33,16 @@ export function probabilityFill(p) {
   return `rgba(0, 152, 255, ${(0.04 + 0.46 * clamped).toFixed(3)})`;
 }
 
+// diverging heatmap fill: red for negative, blue for positive, opacity tracks |value| / maxAbs
+export function heatmapFill(value, maxAbs) {
+  if (Number.isNaN(value) || value === 0) return null;
+  // infinities (masked scores) render at full intensity
+  const t = Number.isFinite(value) ? (maxAbs > 0 ? Math.min(Math.abs(value) / maxAbs, 1) : 0) : 1;
+  if (t === 0) return null;
+  const alpha = (0.06 + 0.56 * t).toFixed(3);
+  return value < 0 ? `rgba(244, 71, 71, ${alpha})` : `rgba(0, 152, 255, ${alpha})`;
+}
+
 export const DIFFICULTY_COLORS = {
   tutorial: "#4ec9b0",
   easy: "#569cd6",
