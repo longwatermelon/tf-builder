@@ -384,11 +384,6 @@ export default function App() {
             }}
           >
             Weights
-            {puzzle.hint ? (
-              <span style={{ marginLeft: "auto", textTransform: "none", letterSpacing: 0, color: COLORS.warn, fontSize: 10 }}>
-                hint: {puzzle.hint}
-              </span>
-            ) : null}
           </div>
           <div style={{ flex: 1, overflow: "auto", padding: "0 14px 14px" }}>
             {selectedModule ? (
