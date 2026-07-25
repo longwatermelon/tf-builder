@@ -27,7 +27,7 @@ const MIN_PANEL_WIDTH = 150;
 
 // pixel widths of the puzzles, objective and architecture panels; the weights panel between the
 // last two absorbs whatever space is left
-const DEFAULT_WIDTHS = [250, 400, 280];
+const DEFAULT_WIDTHS = [250, 400, 360];
 
 // space the panels themselves can occupy, excluding the row padding and the gutters
 function measureAvailable(row) {
