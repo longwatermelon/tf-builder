@@ -2,6 +2,12 @@ import { useRef, useState } from "react";
 import { numberToText, parseNumberText } from "../lib/format";
 import { COLORS, MONO } from "../styles/theme";
 
+const VALUE_SHORTCUTS = {
+  q: "-1",
+  w: "inf",
+  e: "-inf",
+};
+
 // one hand-editable float; keeps a local draft so partial input like "-" survives typing
 export default function NumberCell({
   value,
@@ -50,10 +56,21 @@ export default function NumberCell({
         setInvalid(false);
       }}
       onKeyDown={(event) => {
-        if (!onNav) return;
         const input = event.currentTarget;
         // a fully selected cell counts as both edges so the first arrow press already moves
         const allSelected = input.selectionStart === 0 && input.selectionEnd === input.value.length;
+        const shortcut = !event.metaKey && !event.ctrlKey && !event.altKey && allSelected
+          ? VALUE_SHORTCUTS[event.key.toLowerCase()]
+          : null;
+        if (shortcut) {
+          event.preventDefault();
+          setDraft(shortcut);
+          const parsed = parseNumberText(shortcut, allowInfinity);
+          setInvalid(parsed === null);
+          if (parsed !== null) onCommit(parsed);
+          return;
+        }
+        if (!onNav) return;
         const atStart = allSelected || (input.selectionStart === 0 && input.selectionEnd === 0);
         const atEnd =
           allSelected
