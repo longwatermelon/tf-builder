@@ -7,6 +7,7 @@ const menuItemStyle = {
   width: "100%",
   textAlign: "left",
   borderColor: "transparent",
+  color: COLORS.text,
   whiteSpace: "nowrap",
 };
 
