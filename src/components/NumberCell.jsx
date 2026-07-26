@@ -3,6 +3,7 @@ import { numberToText, parseNumberText } from "../lib/format";
 import { COLORS, MONO } from "../styles/theme";
 
 const VALUE_SHORTCUTS = {
+  a: ".",
   q: "-",
   w: "0",
   e: "1000",

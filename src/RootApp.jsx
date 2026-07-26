@@ -98,7 +98,7 @@ export default function RootApp() {
       id: "weights",
       title: "Weights",
       description:
-        "Hand-edit every weight of the selected module here. Type decimal values directly, navigate with arrow keys, and use q to insert a minus sign, w to insert zero, e to insert 1000, and r to insert infinity in attention masks. Click any row or column label to give that dimension a short name — it follows the axis through the whole stack.",
+        "Hand-edit every weight of the selected module here. Type decimal values directly, navigate with arrow keys, and use a to insert a decimal point, q to insert a minus sign, w to insert zero, e to insert 1000, and r to insert infinity in attention masks. Click any row or column label to give that dimension a short name — it follows the axis through the whole stack.",
       targetRef: weightsGuideRef,
     },
     {
