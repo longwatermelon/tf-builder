@@ -9,11 +9,13 @@ import {
 } from "../../lib/model";
 import { decodeAttempt } from "../../lib/attemptFile";
 import agreementAuthorAttempt from "./author-solutions/agreement.json";
+import prevTokenAuthorAttempt from "./author-solutions/prev_token.json";
 import repairAuthorAttempt from "./author-solutions/repair.json";
 import startMarkerAuthorAttempt from "./author-solutions/start_marker.json";
 
 const AUTHOR_ATTEMPTS = {
   agreement: agreementAuthorAttempt,
+  prev_token: prevTokenAuthorAttempt,
   repair: repairAuthorAttempt,
   start_marker: startMarkerAuthorAttempt,
 };
