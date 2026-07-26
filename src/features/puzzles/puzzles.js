@@ -37,6 +37,11 @@ function causalMask(len) {
   return Array.from({ length: len }, (_, i) => Array.from({ length: len }, (_, j) => (j <= i ? 0 : NEG)));
 }
 
+// strict causal mask: query i attends only to positions before i
+function strictCausalMask(len) {
+  return Array.from({ length: len }, (_, i) => Array.from({ length: len }, (_, j) => (j < i ? 0 : NEG)));
+}
+
 // predict the current token: the embedding alone can already be the logits
 function echoSolution() {
   return {
@@ -137,14 +142,63 @@ function classifySolution() {
   };
 }
 
-// every query attends to position 0 and the head writes that token back over the stream
-function broadcastSolution() {
-  return maskedCopySolution(pointMask(4, () => 0));
+// uniform attention counts a tokens while position embeddings set each sorted slot's threshold
+function binarySortSolution() {
+  return {
+    dModel: 2,
+    modules: [
+      {
+        ...createEmbed({ useE: true, useP: true }),
+        W_E: [[1, 0], [0, 0]],
+        W_P: [[0, -0.5], [0, -1.5], [0, -2.5], [0, -3.5]],
+      },
+      {
+        ...createAttn({ dHead: 1, useMask: false }),
+        // zero queries and keys give every token equal weight
+        W_V: [[1], [0]],
+        W_O: [[0, 4]],
+      },
+      {
+        ...createLinear({ dOut: 2 }),
+        useB: false,
+        W: [[0, 0], [LOGIT_SCALE, -LOGIT_SCALE]],
+      },
+    ],
+  };
 }
 
-// same compact copy as broadcast, but the mask is the anti-diagonal
-function reverseSolution() {
-  return maskedCopySolution(pointMask(4, (i) => 3 - i));
+// content attention retrieves prior matches and an mlp detects their agreement with the query
+function seenBeforeSolution() {
+  const MATCH_SCALE = 10;
+  return {
+    dModel: 3,
+    modules: [
+      {
+        ...createEmbed({ useE: true, useP: false }),
+        W_E: [[1, 0, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+      },
+      {
+        ...createAttn({ dHead: 1, useMask: true }),
+        W_Q: [[MATCH_SCALE], [0], [0]],
+        W_K: [[1], [0], [0]],
+        W_V: [[1], [0], [0]],
+        W_O: [[0, 1, 0]],
+        mask: strictCausalMask(4),
+      },
+      {
+        ...createMlp({ dHidden: 2 }),
+        W1: [[1, -1], [1, -1], [0, 0]],
+        b1: [-1.5, -1.5],
+        W2: [[0, 0, 1], [0, 0, 1]],
+        useB2: false,
+      },
+      {
+        ...createLinear({ dOut: 4 }),
+        W: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, LOGIT_SCALE, -LOGIT_SCALE]],
+        b: [0, 0, -1, 1],
+      },
+    ],
+  };
 }
 
 // one relu folds the two agreement cases onto the same positive scalar
@@ -310,14 +364,20 @@ function previousTargets(tokens) {
   return tokens.map((_, i) => (i === 0 ? "⋄" : tokens[i - 1]));
 }
 
-// broadcast copies the first token to every position
-function broadcastTargets(tokens) {
-  return tokens.map(() => tokens[0]);
+// binary sort places every a before every b
+function binarySortTargets(tokens) {
+  const countA = tokens.filter((token) => token === "a").length;
+  return tokens.map((_, i) => (i < countA ? "a" : "b"));
 }
 
-// reverse mirrors the complete fixed-length sequence
-function reverseTargets(tokens) {
-  return [...tokens].reverse();
+// seen before marks tokens that already occurred earlier in the sequence
+function seenBeforeTargets(tokens) {
+  const seen = new Set();
+  return tokens.map((token) => {
+    const target = seen.has(token) ? "y" : "n";
+    seen.add(token);
+    return target;
+  });
 }
 
 // agreement checks whether token identity agrees with position parity
@@ -451,32 +511,32 @@ const PUZZLE_DEFS = [
     solutionFactory: prevTokenSolution,
   },
   {
-    id: "broadcast",
-    name: "Broadcast",
+    id: "binary_sort",
+    name: "Binary Sort",
     difficulty: "medium",
-    blurb: "Every position outputs the token that sits at position 0.",
-    formula: "y_i = x_0",
-    vocab: ["a", "b", "c"],
+    blurb: "Sort the sequence so every a comes before every b. Sequences are always 4 long here.",
+    formula: "y_i = \\begin{cases} a, & i < \\#\\{j : x_j = a\\} \\\\ b, & \\text{otherwise} \\end{cases}",
+    vocab: ["a", "b"],
     maxLen: 4,
-    epsilon: 0.05,
-    tests: makeTests(["abcb", "caab", "bcca"], broadcastTargets),
-    targetFactory: broadcastTargets,
-    solutionFactory: broadcastSolution,
-  },
-  {
-    id: "reverse",
-    name: "Reverse",
-    difficulty: "medium",
-    blurb: "Turn the sequence around: every position outputs the token mirrored across the middle. Sequences are always 4 long here.",
-    formula: "y_i = x_{3-i}",
-    vocab: ["a", "b", "c"],
-    maxLen: 4,
-    // the anti-diagonal mask is tied to one length, so the scratch sequence cannot be resized
     fixedLen: true,
     epsilon: 0.05,
-    tests: makeTests(["abca", "cabb", "bbca"], reverseTargets),
-    targetFactory: reverseTargets,
-    solutionFactory: reverseSolution,
+    tests: makeTests(["baba", "bbba", "abaa"], binarySortTargets),
+    targetFactory: binarySortTargets,
+    solutionFactory: binarySortSolution,
+  },
+  {
+    id: "seen_before",
+    name: "Seen Before",
+    difficulty: "medium",
+    blurb: "Answer y when the current token appeared earlier in the sequence, and n when this is its first appearance.",
+    formula: "y_i = \\begin{cases} y, & \\exists j < i : x_j = x_i \\\\ n, & \\text{otherwise} \\end{cases}",
+    vocab: ["a", "b", "y", "n"],
+    inputVocab: ["a", "b"],
+    maxLen: 4,
+    epsilon: 0.05,
+    tests: makeTests(["aaaa", "aaba", "babb"], seenBeforeTargets),
+    targetFactory: seenBeforeTargets,
+    solutionFactory: seenBeforeSolution,
   },
   {
     id: "agreement",
