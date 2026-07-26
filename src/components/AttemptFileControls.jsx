@@ -53,6 +53,7 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
   const [menuOpen, setMenuOpen] = useState(null); // null | "import" | "export"
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [pasteError, setPasteError] = useState(null); // shown inside the paste box, never auto-dismissed
 
   // track the live puzzle so async reads can detect a puzzle switch mid-flight;
   // layout effect updates the ref synchronously on commit, before pending reads resume
@@ -61,13 +62,20 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
     puzzleIdRef.current = puzzle.id;
   }, [puzzle.id]);
 
+  // auto-dismiss the floating notice so it never lingers over the workspace
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   // dismiss any open menu or paste box when the pointer goes down outside the controls
   useEffect(() => {
     if (!menuOpen && !pasteOpen) return;
     function handlePointerDown(event) {
       if (rootRef.current?.contains(event.target)) return;
       setMenuOpen(null);
-      setPasteOpen(false);
+      closePaste();
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
@@ -78,9 +86,9 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
     return puzzleIdRef.current !== puzzle.id;
   }
 
-  // surface any import failure as a readable notice
-  function failNotice(error) {
-    setNotice({ ok: false, text: error instanceof Error ? error.message : "The attempt could not be imported." });
+  // readable message for any import failure
+  function errorText(error) {
+    return error instanceof Error ? error.message : "The attempt could not be imported.";
   }
 
   // validate attempt JSON from any source and hand its model to the main app
@@ -90,9 +98,15 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
     setNotice({ ok: true, text: "attempt imported" });
   }
 
+  // close the manual paste box and drop any error it was showing
+  function closePaste() {
+    setPasteOpen(false);
+    setPasteError(null);
+  }
+
   // toggle one of the two dropdown menus, dismissing the paste box
   function toggleMenu(name) {
-    setPasteOpen(false);
+    closePaste();
     setMenuOpen((open) => (open === name ? null : name));
   }
 
@@ -125,7 +139,7 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
       if (importIsStale()) return;
       importText(text);
     } catch (error) {
-      failNotice(error);
+      setNotice({ ok: false, text: errorText(error) });
     }
   }
 
@@ -141,13 +155,14 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
     if (importIsStale()) return;
     if (text === null) {
       setPasteText("");
+      setPasteError(null);
       setPasteOpen(true);
       return;
     }
     try {
       importText(text);
     } catch (error) {
-      failNotice(error);
+      setNotice({ ok: false, text: errorText(error) });
     }
   }
 
@@ -155,10 +170,10 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
   function handleManualImport() {
     try {
       importText(pasteText);
-      setPasteOpen(false);
+      closePaste();
       setPasteText("");
     } catch (error) {
-      failNotice(error);
+      setPasteError(errorText(error));
     }
   }
 
@@ -218,11 +233,18 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
           </div>
         ) : null}
       </div>
-      {notice ? (
+      {notice && !pasteOpen && !menuOpen ? (
         <span
           role="status"
           title={notice.text}
-          style={{ color: notice.ok ? COLORS.success : COLORS.negative, fontSize: 10, maxWidth: 180 }}
+          style={{
+            ...popoverStyle,
+            right: 0,
+            padding: "4px 8px",
+            color: notice.ok ? COLORS.success : COLORS.negative,
+            fontSize: 10,
+            maxWidth: 260,
+          }}
         >
           {notice.text}
         </span>
@@ -248,8 +270,13 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
               padding: 6,
             }}
           />
+          {pasteError ? (
+            <span role="status" style={{ color: COLORS.negative, fontSize: 10 }}>
+              {pasteError}
+            </span>
+          ) : null}
           <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-            <button type="button" style={subtleBtnStyle} onClick={() => setPasteOpen(false)}>
+            <button type="button" style={subtleBtnStyle} onClick={closePaste}>
               cancel
             </button>
             <button type="button" style={subtleBtnStyle} onClick={handleManualImport}>
