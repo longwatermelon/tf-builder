@@ -158,13 +158,13 @@ export function decodeAttempt(text, puzzle) {
   try {
     document = JSON.parse(text);
   } catch {
-    throw new Error("The selected file is not valid JSON.");
+    throw new Error("The attempt is not valid JSON.");
   }
   if (!document || typeof document !== "object" || Array.isArray(document)) {
-    throw new Error("The attempt file must contain a JSON object.");
+    throw new Error("The attempt must contain a JSON object.");
   }
   if (document.format !== ATTEMPT_FORMAT || document.version !== ATTEMPT_VERSION) {
-    throw new Error(`This is not a supported ${ATTEMPT_FORMAT} v${ATTEMPT_VERSION} file.`);
+    throw new Error(`This is not a supported ${ATTEMPT_FORMAT} v${ATTEMPT_VERSION} attempt.`);
   }
   if (document.puzzleId !== puzzle.id) {
     throw new Error(`This attempt belongs to “${document.puzzleId}”, not the current “${puzzle.id}” puzzle.`);

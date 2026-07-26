@@ -327,7 +327,7 @@ export default function App({ guideRefs = {}, uiZoom }) {
           {puzzle.difficulty}
         </span>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto", flexWrap: "wrap", justifyContent: "flex-end" }}>
           <span style={{ fontFamily: MONO, fontSize: 11, color: COLORS.textMuted }}>
             {evaluation.validationPassed}/{evaluation.validationTotal} valid inputs
           </span>
