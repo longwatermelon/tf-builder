@@ -29,6 +29,16 @@ function makeId(type) {
   return `${type}-${nextModuleId}`;
 }
 
+// advance the ID sequence past generated IDs restored from an imported model
+export function reserveModuleIds(modules) {
+  for (const module of modules) {
+    const match = /^(?:embed|attn|mlp|linear)-(\d+)$/.exec(module.id);
+    if (!match) continue;
+    const importedId = Number(match[1]);
+    if (Number.isSafeInteger(importedId)) nextModuleId = Math.max(nextModuleId, importedId);
+  }
+}
+
 export function createEmbed({ useE = true, useP = false } = {}) {
   return { id: makeId("embed"), type: "embed", useE, useP, W_E: [], W_P: [] };
 }

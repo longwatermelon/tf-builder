@@ -11,6 +11,7 @@ This project is a website for hand-crafting small transformers. The player picks
 - A puzzle is **solved** when, for every valid rule-generated input and every graded position, the required token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`. The final softmax is over the vocabulary at each position — it is a per-position output distribution, not a next-token prediction.
 - A solve is **elegant** when the total allocated parameter count is at most the canonical solution's. Optional blocks (`W_E`, `W_P`, the attention mask `M`, and every MLP or Linear bias) can be switched off to drop their parameters from the count.
 - Each puzzle ships a **canonical solution** the player can reveal; the elegance bar is derived from it rather than hand-written. Revealing locks progress for the current attempt only — resetting back to a blank model (or reloading) lets a from-scratch rebuild earn the mark again.
+- The current puzzle's **attempt** can be exported to or imported from a versioned JSON file. The file records the puzzle ID and complete model architecture and weights; special infinite attention-mask values are preserved as `"Infinity"` and `"-Infinity"`. Imports are shape-checked and must match the selected puzzle before they replace the current model.
 
 ## File Structure
 
@@ -24,6 +25,7 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/lib/uiScale.js` - Responsive viewport-based UI zoom calculation and resize synchronization.
   - `src/lib/axisLabels.js` - The player's custom dimension names: axis identity across the stack, default labels, and the per-puzzle label store.
   - `src/lib/model.js` - Module definitions, shape reconciliation across the stack, the forward pass, parameter counting, and puzzle grading.
+  - `src/lib/attemptFile.js` - Versioned JSON encoding and strict validation for imported and exported puzzle attempts.
   - `src/features/puzzles/puzzles.js` - Puzzle catalog, target rules, exhaustive validation inputs, and canonical solution factories.
   - `src/components/MathText.jsx` - Shared KaTeX renderer for math expressions in the UI.
   - `src/components/NumberCell.jsx` - One hand-editable float: draft-preserving input with select-on-focus and arrow-key navigation hooks.
@@ -35,6 +37,7 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/components/ModuleInspector.jsx` - Weight editors and shape controls for the selected module, headed by that module's equation in LaTeX.
   - `src/components/TestPanel.jsx` - Detail for the selected sample: the editable scratch sequence, input/required/produced alignment, output distribution, and expandable intermediate values.
   - `src/components/PuzzleLibrary.jsx` - Left sidebar puzzle list grouped by difficulty, with solved / elegant marks.
+  - `src/components/AttemptFileControls.jsx` - Header controls for downloading the current model or replacing it from a validated JSON attempt file.
   - `src/components/ResizeHandle.jsx` - Draggable gutter between two panels; supports pointer drag and arrow-key resizing.
 
 - `nn-builder/` - Git submodule holding the earlier feedforward-network builder, kept only as a design reference.

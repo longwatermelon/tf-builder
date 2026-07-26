@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import AttemptFileControls from "./components/AttemptFileControls";
 import ModuleInspector from "./components/ModuleInspector";
 import ModuleStack from "./components/ModuleStack";
 import ObjectiveCard from "./components/ObjectiveCard";
@@ -15,6 +16,7 @@ import {
   createMlp,
   evaluatePuzzle,
   reconcileShapes,
+  reserveModuleIds,
 } from "./lib/model";
 import { COLORS, DIFFICULTY_COLORS, MONO, btnStyle, subtleBtnStyle } from "./styles/theme";
 
@@ -271,6 +273,19 @@ export default function App({ guideRefs = {}, uiZoom }) {
     setRevealedIds((prev) => new Set(prev).add(activePuzzleId));
   }
 
+  // replace the current puzzle's model only after the attempt file has been validated
+  function importModel(importedModel) {
+    reserveModuleIds(importedModel.modules);
+    setModels((prev) => ({ ...prev, [activePuzzleId]: importedModel }));
+    setSelectedModuleId(importedModel.modules[0].id);
+    setActiveTab(null);
+    setRevealedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(activePuzzleId);
+      return next;
+    });
+  }
+
   const isRevealed = revealedIds.has(activePuzzleId);
   const statusColor = evaluation.elegant ? COLORS.violet : evaluation.solved ? COLORS.success : COLORS.textMuted;
   const statusText = evaluation.elegant ? "Elegant" : evaluation.solved ? "Solved" : "Unsolved";
@@ -332,6 +347,7 @@ export default function App({ guideRefs = {}, uiZoom }) {
             {statusText}
             {isRevealed ? " (revealed)" : ""}
           </span>
+          <AttemptFileControls puzzle={puzzle} model={model} onImport={importModel} />
           <button type="button" style={subtleBtnStyle} onClick={resetModel}>
             reset
           </button>
