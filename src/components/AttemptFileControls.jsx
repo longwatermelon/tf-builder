@@ -121,7 +121,7 @@ export default function AttemptFileControls({ puzzle, model, onImport }) {
   async function handleCopy() {
     setMenuOpen(null);
     try {
-      await navigator.clipboard.writeText(encodeAttempt(puzzle.id, model));
+      await navigator.clipboard.writeText(encodeAttempt(puzzle.id, model, { compact: true }));
       setNotice({ ok: true, text: "attempt copied to clipboard" });
     } catch {
       setNotice({ ok: false, text: "Clipboard access was blocked; use the file export instead." });

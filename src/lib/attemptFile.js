@@ -138,8 +138,8 @@ function readModel(value, puzzle) {
   return { dModel, modules };
 }
 
-// encode one puzzle attempt as a readable, versioned JSON document
-export function encodeAttempt(puzzleId, model) {
+// encode one puzzle attempt as a versioned JSON document; compact skips pretty-print newlines
+export function encodeAttempt(puzzleId, model, { compact = false } = {}) {
   return JSON.stringify(
     {
       format: ATTEMPT_FORMAT,
@@ -148,7 +148,7 @@ export function encodeAttempt(puzzleId, model) {
       model,
     },
     encodeNumber,
-    2,
+    compact ? undefined : 2,
   );
 }
 
