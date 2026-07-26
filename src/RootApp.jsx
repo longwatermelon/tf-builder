@@ -6,6 +6,20 @@ import { btnStyle, COLORS } from "./styles/theme";
 
 const ONBOARDING_KEY = "tf-builder:onboarding";
 
+// detect phones and tablets, including iPads that report a desktop-style user agent
+function detectMobileDevice() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const hasUaDataMobileFlag = typeof navigator.userAgentData?.mobile === "boolean"
+    ? navigator.userAgentData.mobile
+    : false;
+  const userAgent = navigator.userAgent || "";
+  const hasMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(userAgent);
+  const isLikelyIPadDesktopUa = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+
+  return hasUaDataMobileFlag || hasMobileUserAgent || isLikelyIPadDesktopUa;
+}
+
 // baseline onboarding state for first-time visitors
 function createDefaultOnboardingState() {
   return {
@@ -54,6 +68,7 @@ function persistOnboardingState(state) {
 export default function RootApp() {
   const [onboardingState, setOnboardingState] = useState(loadOnboardingState);
   const [isGuideActive, setIsGuideActive] = useState(false);
+  const [isMobileBlocked] = useState(detectMobileDevice);
   const uiZoom = useUiZoom();
 
   const promptCardRef = useRef(null);
@@ -147,6 +162,46 @@ export default function RootApp() {
     setIsGuideActive(false);
     setOnboardingState({ status: "ready", hasCompletedGuide: true });
   }, []);
+
+  if (isMobileBlocked) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          background: COLORS.bg,
+          color: COLORS.text,
+          fontFamily: "'Sora', sans-serif",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+        }}
+      >
+        <div
+          role="alert"
+          style={{
+            width: "min(560px, 100%)",
+            background: COLORS.panel,
+            border: `1px solid ${COLORS.panelBorder}`,
+            borderRadius: 8,
+            padding: "22px 18px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.textBright }}>Desktop only</div>
+          <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+            This website is intended to be accessed on desktop.
+          </div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.55 }}>
+            Please open this app from a desktop or laptop browser to use the transformer builder.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
