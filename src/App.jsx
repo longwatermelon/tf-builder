@@ -442,7 +442,7 @@ export default function App({ guideRefs = {}, uiZoom }) {
           >
             Weights
             <span style={{ fontSize: 10, letterSpacing: 0, textTransform: "none" }}>
-              q: − · w: 0 · e: 1000 · r: inf · click a label to name it
+              a: . · q: − · w: 0 · e: 1000 · r: inf · click a label to name it
             </span>
           </div>
           <div style={{ flex: 1, overflow: "auto", padding: "0 14px 14px" }}>
