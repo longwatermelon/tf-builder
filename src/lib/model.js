@@ -308,7 +308,7 @@ export function evaluatePuzzle(model, puzzle) {
   };
 }
 
-// helper used by canonical solutions to fill a matrix from a sparse entry list
+// helper used by elegant solutions to fill a matrix from a sparse entry list
 export function withEntries(rows, cols, entries) {
   const m = zeros(rows, cols);
   for (const [i, j, v] of entries) m[i][j] = v;

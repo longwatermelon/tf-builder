@@ -9,8 +9,8 @@ This project is a website for hand-crafting small transformers. The player picks
 - Every row/column label is an **annotation** the player owns: clicking one names that dimension in up to 4 characters, so `d0 d1 d2` can read `in0 in1 in2`. A name belongs to the axis, not the matrix, so it follows that dimension through every module and into the computed value grids. The residual stream, the positions (`W_P` rows and both mask axes) and the vocabulary are shared by the whole stack; attention head dims, MLP hidden units, and a `Linear`'s own output dims are separate vector spaces, so each module names those itself. Names live per puzzle and last for the session.
 - There is no LayerNorm, and attention scores are raw `QKᵀ` with no `1/√d` scaling — both would only make hand-crafting harder without teaching anything.
 - A puzzle is **solved** when, for every valid rule-generated input and every graded position, the required token is the argmax of the output softmax *and* beats the runner-up by the puzzle's `epsilon`. The final softmax is over the vocabulary at each position — it is a per-position output distribution, not a next-token prediction.
-- A solve is **elegant** when the total allocated parameter count is at most the canonical solution's. Optional blocks (`W_E`, `W_P`, the attention mask `M`, and every MLP or Linear bias) can be switched off to drop their parameters from the count.
-- Each puzzle ships a **canonical solution** the player can reveal; the elegance bar is derived from it rather than hand-written. Revealing locks progress for the current attempt only — resetting back to a blank model (or reloading) lets a from-scratch rebuild earn the mark again.
+- A solve is **elegant** when the total allocated parameter count is at most the elegant solution's. Optional blocks (`W_E`, `W_P`, the attention mask `M`, and every MLP or Linear bias) can be switched off to drop their parameters from the count.
+- Each puzzle ships an **elegant solution**, and puzzles can also include an **author's solution**. Revealing either locks progress for the current attempt only — resetting back to a blank model (or reloading) lets a from-scratch rebuild earn the mark again.
 - The current puzzle's **attempt** can be exported to or imported from a versioned JSON file, or moved through the clipboard with copy / paste controls (with a manual paste box when the browser blocks clipboard reading). The file records the puzzle ID and complete model architecture and weights; special infinite attention-mask values are preserved as `"Infinity"` and `"-Infinity"`. Imports are shape-checked and must match the selected puzzle before they replace the current model.
 
 ## File Structure
@@ -26,7 +26,8 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/lib/axisLabels.js` - The player's custom dimension names: axis identity across the stack, default labels, and the per-puzzle label store.
   - `src/lib/model.js` - Module definitions, shape reconciliation across the stack, the forward pass, parameter counting, and puzzle grading.
   - `src/lib/attemptFile.js` - Versioned JSON encoding and strict validation for imported and exported puzzle attempts.
-  - `src/features/puzzles/puzzles.js` - Puzzle catalog, target rules, exhaustive validation inputs, and canonical solution factories.
+  - `src/features/puzzles/puzzles.js` - Puzzle catalog, target rules, exhaustive validation inputs, and elegant solution factories.
+  - `src/features/puzzles/author-solutions/` - Optional versioned attempt files for author's solutions.
   - `src/components/MathText.jsx` - Shared KaTeX renderer for math expressions in the UI.
   - `src/components/NumberCell.jsx` - One hand-editable float: draft-preserving input with select-on-focus and arrow-key navigation hooks.
   - `src/components/EditableLabel.jsx` - One row/column label, click-to-rename when its axis can carry a custom name.

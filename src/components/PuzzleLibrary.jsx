@@ -55,7 +55,7 @@ export default function PuzzleLibrary({ puzzles, activeId, progress, onSelect })
                   </div>
                   <MathText tex={puzzle.formula} style={{ color: COLORS.textMuted, fontSize: 11, marginTop: 3 }} />
                   <div style={{ fontFamily: MONO, fontSize: 9, color: COLORS.textMuted, marginTop: 3 }}>
-                    canonical {puzzle.canonicalParams}p
+                    elegant {puzzle.canonicalParams}p
                   </div>
                 </div>
               );

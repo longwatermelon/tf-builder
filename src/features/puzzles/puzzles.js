@@ -7,8 +7,14 @@ import {
   reconcileShapes,
   withEntries,
 } from "../../lib/model";
+import { decodeAttempt } from "../../lib/attemptFile";
+import agreementAuthorAttempt from "./author-solutions/agreement.json";
 
-// logit gap used by canonical solutions; large enough to clear epsilon comfortably
+const AUTHOR_ATTEMPTS = {
+  agreement: agreementAuthorAttempt,
+};
+
+// logit gap used by elegant solutions; large enough to clear epsilon comfortably
 const LOGIT_SCALE = 5;
 
 const NEG = -Infinity;
@@ -595,9 +601,10 @@ const PUZZLE_DEFS = [
   },
 ];
 
-// build a fully shaped canonical model for a puzzle
-export function buildSolution(puzzle) {
-  return reconcileShapes(puzzle.solutionFactory(), puzzle);
+// build a fresh, fully shaped copy of one provided solution
+export function buildSolution(puzzle, kind = "elegant") {
+  const source = kind === "author" ? puzzle.authorSolution : puzzle.solutionFactory();
+  return source ? reconcileShapes(source, puzzle) : null;
 }
 
 // derive exhaustive rule-validation cases and the elegance bar from each puzzle definition
@@ -607,8 +614,10 @@ export const PUZZLES = PUZZLE_DEFS.map((puzzle) => {
     puzzle.maxLen,
     { fixedLen: puzzle.fixedLen, prefix: puzzle.validationPrefix },
   );
+  const authorAttempt = AUTHOR_ATTEMPTS[puzzle.id];
   return {
     ...puzzle,
+    authorSolution: authorAttempt ? decodeAttempt(JSON.stringify(authorAttempt), puzzle) : null,
     validationTests: makeTests(validationInputs, puzzle.targetFactory),
     canonicalParams: countParams(reconcileShapes(puzzle.solutionFactory(), puzzle), puzzle),
   };

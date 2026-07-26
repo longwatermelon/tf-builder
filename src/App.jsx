@@ -5,6 +5,7 @@ import ModuleStack from "./components/ModuleStack";
 import ObjectiveCard from "./components/ObjectiveCard";
 import PuzzleLibrary from "./components/PuzzleLibrary";
 import ResizeHandle, { HANDLE_WIDTH } from "./components/ResizeHandle";
+import SolutionMenu from "./components/SolutionMenu";
 import TestPanel from "./components/TestPanel";
 import { buildSolution, getPuzzle, PUZZLES } from "./features/puzzles/puzzles";
 import { computeStreamAxes, setLabel } from "./lib/axisLabels";
@@ -18,7 +19,7 @@ import {
   reconcileShapes,
   reserveModuleIds,
 } from "./lib/model";
-import { COLORS, DIFFICULTY_COLORS, MONO, btnStyle, subtleBtnStyle } from "./styles/theme";
+import { COLORS, DIFFICULTY_COLORS, MONO, subtleBtnStyle } from "./styles/theme";
 
 const PROGRESS_KEY = "tf-builder:progress:rule-validation-v1";
 
@@ -266,8 +267,11 @@ export default function App({ guideRefs = {}, uiZoom }) {
     });
   }
 
-  function revealSolution() {
-    const solution = buildSolution(puzzle);
+  // replace the current attempt with the selected provided solution
+  function revealSolution(kind) {
+    const solution = buildSolution(puzzle, kind);
+    if (!solution) return;
+    reserveModuleIds(solution.modules);
     setModels((prev) => ({ ...prev, [activePuzzleId]: solution }));
     setSelectedModuleId(solution.modules[0].id);
     setRevealedIds((prev) => new Set(prev).add(activePuzzleId));
@@ -332,7 +336,7 @@ export default function App({ guideRefs = {}, uiZoom }) {
             {evaluation.validationPassed}/{evaluation.validationTotal} valid inputs
           </span>
           <span style={{ fontFamily: MONO, fontSize: 11, color: COLORS.textMuted }}>
-            {evaluation.params}p / canonical {puzzle.canonicalParams}p
+            {evaluation.params}p / elegant {puzzle.canonicalParams}p
           </span>
           <span
             style={{
@@ -351,9 +355,7 @@ export default function App({ guideRefs = {}, uiZoom }) {
           <button type="button" style={subtleBtnStyle} onClick={resetModel}>
             reset
           </button>
-          <button type="button" style={btnStyle} onClick={revealSolution}>
-            reveal canonical
-          </button>
+          <SolutionMenu hasAuthorSolution={!!puzzle.authorSolution} onSelect={revealSolution} />
         </div>
       </header>
 

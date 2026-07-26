@@ -105,7 +105,7 @@ export default function RootApp() {
       id: "header",
       title: "Status bar",
       description:
-        "Track valid inputs passed, your parameter count against the canonical solution, and the solve status. You can also reset the model or reveal the canonical solution from here.",
+        "Track valid inputs passed, your parameter count against the elegant solution, and the solve status. You can also reset the model or reveal an author's or elegant solution from here.",
       targetRef: headerGuideRef,
     },
   ];
