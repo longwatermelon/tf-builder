@@ -1,0 +1,27 @@
+{
+  "format": "tf-builder-attempt",
+  "version": 1,
+  "puzzleId": "start_marker",
+  "model": {
+    "dModel": 3,
+    "modules": [
+      {
+        "id": "embed-38",
+        "type": "embed",
+        "useE": true,
+        "useP": true,
+        "W_E": [
+          [0, 0, 0],
+          [0, 1, 0],
+          [0, 0, 1]
+        ],
+        "W_P": [
+          [1, -1000, -1000],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0]
+        ]
+      }
+    ]
+  }
+}

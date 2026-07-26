@@ -1,0 +1,27 @@
+{
+  "format": "tf-builder-attempt",
+  "version": 1,
+  "puzzleId": "repair",
+  "model": {
+    "dModel": 3,
+    "modules": [
+      {
+        "id": "embed-37",
+        "type": "embed",
+        "useE": true,
+        "useP": false,
+        "W_E": [
+          [0, 1, 0],
+          [0, 1, 0],
+          [0, 0, 10]
+        ],
+        "W_P": [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0]
+        ]
+      }
+    ]
+  }
+}

@@ -9,10 +9,16 @@ import {
 } from "../../lib/model";
 import { decodeAttempt } from "../../lib/attemptFile";
 import agreementAuthorAttempt from "./author-solutions/agreement.json";
+import repairAuthorAttempt from "./author-solutions/repair.json";
+import startMarkerAuthorAttempt from "./author-solutions/start_marker.json";
 
 const AUTHOR_ATTEMPTS = {
   agreement: agreementAuthorAttempt,
+  repair: repairAuthorAttempt,
+  start_marker: startMarkerAuthorAttempt,
 };
+
+const ELEGANT_AUTHOR_IDS = new Set(["echo", "successor", "alternate", "classify"]);
 
 // logit gap used by elegant solutions; large enough to clear epsilon comfortably
 const LOGIT_SCALE = 5;
@@ -615,10 +621,15 @@ export const PUZZLES = PUZZLE_DEFS.map((puzzle, index) => {
     { fixedLen: puzzle.fixedLen, prefix: puzzle.validationPrefix },
   );
   const authorAttempt = AUTHOR_ATTEMPTS[puzzle.id];
+  const authorSolution = authorAttempt
+    ? decodeAttempt(JSON.stringify(authorAttempt), puzzle)
+    : ELEGANT_AUTHOR_IDS.has(puzzle.id)
+      ? reconcileShapes(puzzle.solutionFactory(), puzzle)
+      : null;
   return {
     ...puzzle,
     number: index + 1,
-    authorSolution: authorAttempt ? decodeAttempt(JSON.stringify(authorAttempt), puzzle) : null,
+    authorSolution,
     validationTests: makeTests(validationInputs, puzzle.targetFactory),
     canonicalParams: countParams(reconcileShapes(puzzle.solutionFactory(), puzzle), puzzle),
   };
