@@ -46,7 +46,9 @@ export default function PuzzleLibrary({ puzzles, activeId, progress, onSelect })
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textBright }}>{puzzle.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textBright }}>
+                      {puzzle.number}. {puzzle.name}
+                    </span>
                     {state === "elegant" ? (
                       <span style={{ fontSize: 10, color: COLORS.violet, marginLeft: "auto" }}>★ elegant</span>
                     ) : state === "solved" ? (

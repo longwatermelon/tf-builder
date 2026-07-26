@@ -319,7 +319,9 @@ export default function App({ guideRefs = {}, uiZoom }) {
       >
         <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.textBright, letterSpacing: 0.3 }}>tf-builder</span>
         <span style={{ color: COLORS.panelBorder }}>│</span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textBright }}>{puzzle.name}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textBright }}>
+          {puzzle.number}. {puzzle.name}
+        </span>
         <span
           style={{
             fontSize: 10,

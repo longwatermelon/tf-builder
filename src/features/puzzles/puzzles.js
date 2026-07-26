@@ -517,6 +517,19 @@ const PUZZLE_DEFS = [
     solutionFactory: prevTokenSolution,
   },
   {
+    id: "agreement",
+    name: "Agreement",
+    difficulty: "medium",
+    blurb: "Output a when the token and the position agree — an a at an even position, or a b at an odd one — and b otherwise.",
+    formula: "y_i = \\begin{cases} a, & [x_i = a] = [i \\text{ even}] \\\\ b, & \\text{otherwise} \\end{cases}",
+    vocab: ["a", "b"],
+    maxLen: 4,
+    epsilon: 0.05,
+    tests: makeTests(["aabb", "baab", "abab"], agreementTargets),
+    targetFactory: agreementTargets,
+    solutionFactory: agreementSolution,
+  },
+  {
     id: "binary_sort",
     name: "Binary Sort",
     difficulty: "medium",
@@ -543,19 +556,6 @@ const PUZZLE_DEFS = [
     tests: makeTests(["aaaa", "aaba", "babb"], seenBeforeTargets),
     targetFactory: seenBeforeTargets,
     solutionFactory: seenBeforeSolution,
-  },
-  {
-    id: "agreement",
-    name: "Agreement",
-    difficulty: "medium",
-    blurb: "Output a when the token and the position agree — an a at an even position, or a b at an odd one — and b otherwise.",
-    formula: "y_i = \\begin{cases} a, & [x_i = a] = [i \\text{ even}] \\\\ b, & \\text{otherwise} \\end{cases}",
-    vocab: ["a", "b"],
-    maxLen: 4,
-    epsilon: 0.05,
-    tests: makeTests(["aabb", "baab", "abab"], agreementTargets),
-    targetFactory: agreementTargets,
-    solutionFactory: agreementSolution,
   },
   {
     id: "match_first",
@@ -608,7 +608,7 @@ export function buildSolution(puzzle, kind = "elegant") {
 }
 
 // derive exhaustive rule-validation cases and the elegance bar from each puzzle definition
-export const PUZZLES = PUZZLE_DEFS.map((puzzle) => {
+export const PUZZLES = PUZZLE_DEFS.map((puzzle, index) => {
   const validationInputs = enumerateInputs(
     puzzle.validationVocab ?? puzzle.inputVocab ?? puzzle.vocab,
     puzzle.maxLen,
@@ -617,6 +617,7 @@ export const PUZZLES = PUZZLE_DEFS.map((puzzle) => {
   const authorAttempt = AUTHOR_ATTEMPTS[puzzle.id];
   return {
     ...puzzle,
+    number: index + 1,
     authorSolution: authorAttempt ? decodeAttempt(JSON.stringify(authorAttempt), puzzle) : null,
     validationTests: makeTests(validationInputs, puzzle.targetFactory),
     canonicalParams: countParams(reconcileShapes(puzzle.solutionFactory(), puzzle), puzzle),
