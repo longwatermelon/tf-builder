@@ -48,6 +48,7 @@ export const DIFFICULTY_COLORS = {
   easy: "#569cd6",
   medium: "#dcdcaa",
   hard: "#f44747",
+  insane: "#c586c0",
 };
 
 // base action button style

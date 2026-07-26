@@ -60,7 +60,11 @@ export default function ObjectiveCard({ puzzle, evaluation, scratchTokens, activ
             vocabulary{" "}
             <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>{puzzle.vocab.join(" ")}</span>
           </span>
-          {puzzle.validationPrefix ? (
+          {puzzle.inputFormat ? (
+            <span style={{ fontSize: 10, color: COLORS.textMuted }}>
+              input format <span style={{ fontFamily: MONO, color: COLORS.textBright }}>{puzzle.inputFormat}</span>
+            </span>
+          ) : puzzle.validationPrefix ? (
             <span style={{ fontSize: 10, color: COLORS.textMuted }}>
               inputs{" "}
               <span style={{ fontFamily: MONO, color: COLORS.textBright, letterSpacing: 2 }}>

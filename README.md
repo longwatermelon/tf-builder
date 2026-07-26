@@ -4,7 +4,7 @@ This project is a website for hand-crafting small transformers. The player picks
 
 ## Summary
 
-- A **puzzle** is one input/output rule with a vocabulary, a small visible set of representative samples, and rule-derived validation over every valid input up to `maxLen`. Puzzles are graded `tutorial` / `easy` / `medium` / `hard`. A `null` target marks a position the rule does not determine, which is displayed as `·` and left ungraded. Optionally a puzzle also declares `inputVocab`, the subset of the vocabulary that can appear as input when the rest of it is output-only labels, and `fixedLen`, which pins every sequence to `maxLen`.
+- A **puzzle** is one input/output rule with a vocabulary, a small visible set of representative samples, and rule-derived validation over every valid input up to `maxLen`. Puzzles are graded `tutorial` / `easy` / `medium` / `hard` / `insane`. A `null` target marks a position the rule does not determine, which is displayed as `·` and left ungraded. Optionally a puzzle also declares `inputVocab`, the subset of the vocabulary that can appear as input when the rest of it is output-only labels, `fixedLen`, which pins every sequence to `maxLen`, or an explicit structured input domain for fixed-format tasks.
 - The **module stack** is the player's architecture. Every puzzle starts with a single **Embedding** module, sized so the residual stream is already the token axis; the player inserts and deletes **Attention Head**, **MLP**, and **Linear** modules themselves, at any point in the stack. Attention and MLP add into the residual stream; Linear is the only module that changes the stream width, so it doubles as the unembedding.
 - Every row/column label is an **annotation** the player owns: clicking one names that dimension in up to 4 characters, so `d0 d1 d2` can read `in0 in1 in2`. A name belongs to the axis, not the matrix, so it follows that dimension through every module and into the computed value grids. The residual stream, the positions (`W_P` rows and both mask axes) and the vocabulary are shared by the whole stack; attention head dims, MLP hidden units, and a `Linear`'s own output dims are separate vector spaces, so each module names those itself. Names live per puzzle and last for the session.
 - There is no LayerNorm, and attention scores are raw `QKᵀ` with no `1/√d` scaling — both would only make hand-crafting harder without teaching anything.
@@ -42,5 +42,6 @@ This project is a website for hand-crafting small transformers. The player picks
   - `src/components/ResizeHandle.jsx` - Draggable gutter between two panels; supports pointer drag and arrow-key resizing.
 
 - `nn-builder/` - Git submodule holding the earlier feedforward-network builder, kept only as a design reference.
+- `scripts/verify-puzzles.mjs` - Bundled Node verification for structured puzzle domains and canonical solutions.
 - `idea.md` - Original design notes for the game.
 - `README.md` - Source-of-truth map for this structure. If you add, remove, or repurpose files/directories, update this document in the same change.

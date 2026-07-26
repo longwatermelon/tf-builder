@@ -165,11 +165,11 @@ export default function TestPanel({
           {scratchTokens.map((token, i) => (
             <button
               key={`s-${i}`}
-              disabled={i < fixedPrefix.length}
+              disabled={i < fixedPrefix.length || puzzle.scratchChoices?.[i]?.length === 1}
               type="button"
               onClick={() => {
                 const next = [...scratchTokens];
-                const choices = i < fixedPrefix.length ? [fixedPrefix[i]] : inputVocab;
+                const choices = puzzle.scratchChoices?.[i] ?? (i < fixedPrefix.length ? [fixedPrefix[i]] : inputVocab);
                 const at = choices.indexOf(token);
                 next[i] = choices[(at + 1) % choices.length];
                 onChangeScratch(next);

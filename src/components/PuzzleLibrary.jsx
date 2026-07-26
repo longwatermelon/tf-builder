@@ -1,7 +1,7 @@
 import { COLORS, DIFFICULTY_COLORS, MONO } from "../styles/theme";
 import MathText from "./MathText";
 
-const DIFFICULTY_ORDER = ["tutorial", "easy", "medium", "hard"];
+const DIFFICULTY_ORDER = ["tutorial", "easy", "medium", "hard", "insane"];
 
 export default function PuzzleLibrary({ puzzles, activeId, progress, onSelect }) {
   const groups = DIFFICULTY_ORDER.map((difficulty) => ({
